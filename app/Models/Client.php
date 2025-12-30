@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Scopes\UserScope;
 use Illuminate\Database\Eloquent\Model;
 
 class Client extends Model
@@ -13,6 +14,11 @@ class Client extends Model
         'company',
         'address',
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
+    }
 
     public function user()
     {

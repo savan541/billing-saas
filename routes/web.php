@@ -2,11 +2,16 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ClientController;
+use App\Services\ClientService;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+    
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
@@ -15,8 +20,12 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+Route::get('/dashboard', function (ClientService $clientService) {
+    $user = auth()->user();
+    
+    return Inertia::render('Dashboard', [
+        'stats' => $clientService->getStatsForUser($user)
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {

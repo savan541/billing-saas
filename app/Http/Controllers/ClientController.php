@@ -2,63 +2,45 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Requests\StoreClientRequest;
+use App\Http\Requests\UpdateClientRequest;
+use App\Http\Requests\DeleteClientRequest;
 use App\Models\Client;
+use App\Services\ClientService;
+use Illuminate\Http\Request;
 
 class ClientController extends Controller
 {
-    public function __construct()
+    public function __construct(private ClientService $clientService)
     {
-        $this->middleware('auth');
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $clients = Auth::user()->clients()->orderBy('name')->get();
+        $clients = $this->clientService->getClientsForUser($request->user());
         
         return inertia('Clients/Index', [
             'clients' => $clients
         ]);
     }
 
-    public function store(Request $request)
+    public function store(StoreClientRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:20',
-            'company' => 'nullable|string|max:255',
-            'address' => 'nullable|string|max:1000',
-        ]);
-
-        $client = Auth::user()->clients()->create($validated);
+        $this->clientService->createClientForUser($request->user(), $request->validated());
 
         return redirect()->back()->with('success', 'Client created successfully.');
     }
 
-    public function update(Request $request, Client $client)
+    public function update(UpdateClientRequest $request, Client $client)
     {
-        $this->authorize('update', $client);
-        
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'nullable|email|max:255',
-            'phone' => 'nullable|string|max:20',
-            'company' => 'nullable|string|max:255',
-            'address' => 'nullable|string|max:1000',
-        ]);
-
-        $client->update($validated);
+        $this->clientService->updateClient($client, $request->validated());
 
         return redirect()->back()->with('success', 'Client updated successfully.');
     }
 
-    public function destroy(Client $client)
+    public function destroy(DeleteClientRequest $request, Client $client)
     {
-        $this->authorize('delete', $client);
-        
-        $client->delete();
+        $this->clientService->deleteClient($client);
 
         return redirect()->back()->with('success', 'Client deleted successfully.');
     }

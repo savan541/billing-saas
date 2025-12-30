@@ -77,14 +77,12 @@ export default function ClientsIndex({ clients }) {
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                         <div className="p-6">
-                            {/* Success Messages */}
                             {flash?.success && (
                                 <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
                                     {flash.success}
                                 </div>
                             )}
 
-                            {/* Create/Edit Form */}
                             {(showCreateForm || editingClient) && (
                                 <div className="mb-8 p-6 bg-gray-50 rounded-lg">
                                     <h3 className="text-lg font-medium mb-4">
@@ -189,7 +187,6 @@ export default function ClientsIndex({ clients }) {
                                 </div>
                             )}
 
-                            {/* Create Button */}
                             {!showCreateForm && !editingClient && (
                                 <button
                                     onClick={() => setShowCreateForm(true)}
@@ -199,7 +196,6 @@ export default function ClientsIndex({ clients }) {
                                 </button>
                             )}
 
-                            {/* Clients Table */}
                             {clients.length > 0 ? (
                                 <div className="overflow-x-auto">
                                     <table className="min-w-full divide-y divide-gray-200">
@@ -216,6 +212,9 @@ export default function ClientsIndex({ clients }) {
                                                 </th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     Company
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Address
                                                 </th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     Actions
@@ -236,6 +235,9 @@ export default function ClientsIndex({ clients }) {
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                         {client.company || '-'}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-sm text-gray-500">
+                                                        {client.address || '-'}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                         <button
