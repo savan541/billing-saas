@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\InvoicesController;
+use App\Http\Controllers\InvoiceItemsController;
 use App\Services\ClientService;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -37,6 +39,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/clients', [ClientController::class, 'store'])->name('clients.store');
     Route::put('/clients/{client}', [ClientController::class, 'update'])->name('clients.update');
     Route::delete('/clients/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
+
+    Route::resource('invoices', InvoicesController::class);
+    
+    Route::prefix('invoices/{invoice}')->group(function () {
+        Route::post('items', [InvoiceItemsController::class, 'store'])->name('invoices.items.store');
+        Route::put('items/{item}', [InvoiceItemsController::class, 'update'])->name('invoices.items.update');
+        Route::delete('items/{item}', [InvoiceItemsController::class, 'destroy'])->name('invoices.items.destroy');
+    });
 });
 
 require __DIR__.'/auth.php';
