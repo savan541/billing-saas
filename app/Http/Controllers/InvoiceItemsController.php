@@ -4,86 +4,81 @@ namespace App\Http\Controllers;
 
 use App\Models\InvoiceItem;
 use App\Models\Invoice;
+use App\Services\InvoiceService;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\Rule;
 
 class InvoiceItemsController extends Controller
 {
-    public function store(Request $request, Invoice $invoice): JsonResponse
+    public function __construct(private InvoiceService $invoiceService)
     {
-        $this->authorize('update', $invoice);
+    }
+
+    public function store(Request $request, Invoice $invoice): RedirectResponse
+    {
+        $this->authorize('manageItems', $invoice);
 
         $validated = $request->validate([
             'description' => ['required', 'string', 'max:255'],
-            'quantity' => ['required', 'numeric', 'min:0.01'],
-            'unit_price' => ['required', 'numeric', 'min:0'],
+            'quantity' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
+            'unit_price' => ['required', 'numeric', 'min:0', 'max:999999.99'],
         ]);
 
-        $item = $invoice->items()->create($validated);
-
-        $invoice->refresh();
-        $this->updateInvoiceTotals($invoice);
-
-        return response()->json([
-            'item' => $item,
-            'invoice' => $invoice,
+        $item = $invoice->items()->create([
+            'description' => $validated['description'],
+            'quantity' => $validated['quantity'],
+            'unit_price' => $validated['unit_price'],
+            'total' => $validated['quantity'] * $validated['unit_price'],
         ]);
+
+        $this->invoiceService->recalculateInvoiceTotals($invoice);
+
+        return redirect()->route('invoices.show', $invoice);
     }
 
-    public function update(Request $request, Invoice $invoice, InvoiceItem $item): JsonResponse
+    public function update(Request $request, Invoice $invoice, InvoiceItem $item): RedirectResponse
     {
-        $this->authorize('update', $invoice);
+        $this->authorize('manageItems', $invoice);
 
         if ($item->invoice_id !== $invoice->id) {
-            abort(404);
+            abort(404, 'Item not found in this invoice.');
         }
 
         $validated = $request->validate([
             'description' => ['required', 'string', 'max:255'],
-            'quantity' => ['required', 'numeric', 'min:0.01'],
-            'unit_price' => ['required', 'numeric', 'min:0'],
+            'quantity' => ['required', 'numeric', 'min:0.01', 'max:999999.99'],
+            'unit_price' => ['required', 'numeric', 'min:0', 'max:999999.99'],
         ]);
 
-        $item->update($validated);
-
-        $invoice->refresh();
-        $this->updateInvoiceTotals($invoice);
-
-        return response()->json([
-            'item' => $item,
-            'invoice' => $invoice,
+        $item->update([
+            'description' => $validated['description'],
+            'quantity' => $validated['quantity'],
+            'unit_price' => $validated['unit_price'],
+            'total' => $validated['quantity'] * $validated['unit_price'],
         ]);
+
+        $this->invoiceService->recalculateInvoiceTotals($invoice);
+
+        return redirect()->route('invoices.show', $invoice);
     }
 
-    public function destroy(Invoice $invoice, InvoiceItem $item): JsonResponse
+    public function destroy(Invoice $invoice, InvoiceItem $item): RedirectResponse
     {
-        $this->authorize('update', $invoice);
+        $this->authorize('manageItems', $invoice);
 
         if ($item->invoice_id !== $invoice->id) {
-            abort(404);
+            abort(404, 'Item not found in this invoice.');
+        }
+
+        if ($invoice->items()->count() <= 1) {
+            return back()->withErrors(['items' => 'Invoice must have at least one item.']);
         }
 
         $item->delete();
 
-        $invoice->refresh();
-        $this->updateInvoiceTotals($invoice);
+        $this->invoiceService->recalculateInvoiceTotals($invoice);
 
-        return response()->json([
-            'invoice' => $invoice,
-        ]);
-    }
-
-    private function updateInvoiceTotals(Invoice $invoice): void
-    {
-        $subtotal = $invoice->items()->sum('total');
-        $tax = $subtotal * 0.1; // 10% tax rate
-        $total = $subtotal + $tax;
-
-        $invoice->update([
-            'subtotal' => $subtotal,
-            'tax' => $tax,
-            'total' => $total,
-        ]);
+        return redirect()->route('invoices.show', $invoice);
     }
 }

@@ -5,28 +5,39 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Http\Requests\UpdateInvoiceRequest;
 use App\Models\Invoice;
-use App\Models\Client;
+use App\Services\InvoiceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class InvoicesController extends Controller
 {
-    public function __construct()
+    public function __construct(private InvoiceService $invoiceService)
     {
         $this->authorizeResource(Invoice::class, 'invoice');
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $invoices = Auth::user()
             ->invoices()
             ->with('client')
+            ->when($request->search, function ($query, $search) {
+                $query->where('invoice_number', 'like', "%{$search}%")
+                    ->orWhereHas('client', function ($clientQuery) use ($search) {
+                        $clientQuery->where('name', 'like', "%{$search}%");
+                    });
+            })
+            ->when($request->status, function ($query, $status) {
+                $query->where('status', $status);
+            })
             ->orderBy('created_at', 'desc')
-            ->paginate(10);
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('Invoices/Index', [
             'invoices' => $invoices,
+            'filters' => $request->only('search', 'status'),
         ]);
     }
 
@@ -41,22 +52,10 @@ class InvoicesController extends Controller
 
     public function store(StoreInvoiceRequest $request)
     {
-        $validated = $request->validated();
+        $data = $request->validated();
+        $data['user_id'] = Auth::id();
 
-        $invoice = Auth::user()->invoices()->create([
-            'client_id' => $validated['client_id'],
-            'number' => $validated['number'],
-            'status' => $validated['status'],
-            'subtotal' => $validated['subtotal'],
-            'tax' => $validated['tax'],
-            'total' => $validated['total'],
-            'issued_at' => $validated['issued_at'],
-            'due_at' => $validated['due_at'],
-        ]);
-
-        foreach ($validated['items'] as $item) {
-            $invoice->items()->create($item);
-        }
+        $invoice = $this->invoiceService->createInvoice($data);
 
         return redirect()->route('invoices.show', $invoice)
             ->with('success', 'Invoice created successfully.');
@@ -84,24 +83,9 @@ class InvoicesController extends Controller
 
     public function update(UpdateInvoiceRequest $request, Invoice $invoice)
     {
-        $validated = $request->validated();
+        $data = $request->validated();
 
-        $invoice->update([
-            'client_id' => $validated['client_id'],
-            'number' => $validated['number'],
-            'status' => $validated['status'],
-            'subtotal' => $validated['subtotal'],
-            'tax' => $validated['tax'],
-            'total' => $validated['total'],
-            'issued_at' => $validated['issued_at'],
-            'due_at' => $validated['due_at'],
-        ]);
-
-        $invoice->items()->delete();
-
-        foreach ($validated['items'] as $item) {
-            $invoice->items()->create($item);
-        }
+        $invoice = $this->invoiceService->updateInvoice($invoice, $data);
 
         return redirect()->route('invoices.show', $invoice)
             ->with('success', 'Invoice updated successfully.');
@@ -109,7 +93,7 @@ class InvoicesController extends Controller
 
     public function destroy(Invoice $invoice)
     {
-        $invoice->delete();
+        $this->invoiceService->deleteInvoice($invoice);
 
         return redirect()->route('invoices.index')
             ->with('success', 'Invoice deleted successfully.');

@@ -11,10 +11,11 @@ import InputError from '@/Components/InputError';
 export default function Edit({ invoice, clients }) {
     const { data, setData, put, processing, errors, reset } = useForm({
         client_id: invoice.client_id.toString(),
-        number: invoice.number,
+        invoice_number: invoice.invoice_number,
         status: invoice.status,
-        issued_at: invoice.issued_at,
-        due_at: invoice.due_at,
+        issue_date: invoice.issue_date ? new Date(invoice.issue_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        due_date: invoice.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        notes: invoice.notes || '',
         items: invoice.items.map(item => ({
             description: item.description,
             quantity: item.quantity.toString(),
@@ -78,26 +79,23 @@ export default function Edit({ invoice, clients }) {
         }, 0);
         
         const taxAmount = subtotalAmount * 0.1;
-        const totalAmount = subtotalAmount + taxAmount;
-        
-        setData('subtotal', subtotalAmount);
-        setData('tax', taxAmount);
-        setData('total', totalAmount);
+        const discountAmount = 0; // Can be made configurable later
+        const totalAmount = subtotalAmount + taxAmount - discountAmount;
         
         put(route('invoices.update', invoice.id));
     };
 
     return (
         <AuthenticatedLayout>
-            <Head title={`Edit Invoice ${invoice.number}`} />
+            <Head title={`Edit Invoice ${invoice.invoice_number}`} />
 
-            <div className="max-w-4xl mx-auto sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 pt-8">
                 <div className="flex items-center gap-4 mb-6">
                     <Link href={route('invoices.index')}>
                         <SecondaryButton>← Back to Invoices</SecondaryButton>
                     </Link>
                     <h1 className="text-2xl font-semibold text-gray-900">
-                        Edit Invoice {invoice.number}
+                        Edit Invoice {invoice.invoice_number}
                     </h1>
                 </div>
 
@@ -138,43 +136,42 @@ export default function Edit({ invoice, clients }) {
                                         </div>
 
                                         <div>
-                                            <InputLabel htmlFor="number">Invoice Number</InputLabel>
+                                            <InputLabel htmlFor="invoice_number">Invoice Number</InputLabel>
                                             <TextInput
-                                                id="number"
-                                                value={data.number}
-                                                onChange={(e) => setData('number', e.target.value)}
-                                                disabled={!invoice.can_be_modified}
-                                                className={errors.number ? 'border-red-500' : ''}
+                                                id="invoice_number"
+                                                value={data.invoice_number}
+                                                disabled
+                                                className="bg-gray-100"
                                             />
-                                            <InputError message={errors.number} className="mt-2" />
+                                            <p className="text-xs text-gray-500 mt-1">Invoice numbers are auto-generated</p>
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <InputLabel htmlFor="issued_at">Issue Date</InputLabel>
+                                            <InputLabel htmlFor="issue_date">Issue Date</InputLabel>
                                             <TextInput
-                                                id="issued_at"
+                                                id="issue_date"
                                                 type="date"
-                                                value={data.issued_at}
-                                                onChange={(e) => setData('issued_at', e.target.value)}
+                                                value={data.issue_date}
+                                                onChange={(e) => setData('issue_date', e.target.value)}
                                                 disabled={!invoice.can_be_modified}
-                                                className={errors.issued_at ? 'border-red-500' : ''}
+                                                className={errors.issue_date ? 'border-red-500' : ''}
                                             />
-                                            <InputError message={errors.issued_at} className="mt-2" />
+                                            <InputError message={errors.issue_date} className="mt-2" />
                                         </div>
 
                                         <div>
-                                            <InputLabel htmlFor="due_at">Due Date</InputLabel>
+                                            <InputLabel htmlFor="due_date">Due Date</InputLabel>
                                             <TextInput
-                                                id="due_at"
+                                                id="due_date"
                                                 type="date"
-                                                value={data.due_at}
-                                                onChange={(e) => setData('due_at', e.target.value)}
+                                                value={data.due_date}
+                                                onChange={(e) => setData('due_date', e.target.value)}
                                                 disabled={!invoice.can_be_modified}
-                                                className={errors.due_at ? 'border-red-500' : ''}
+                                                className={errors.due_date ? 'border-red-500' : ''}
                                             />
-                                            <InputError message={errors.due_at} className="mt-2" />
+                                            <InputError message={errors.due_date} className="mt-2" />
                                         </div>
                                     </div>
 
@@ -191,6 +188,20 @@ export default function Edit({ invoice, clients }) {
                                             <option value="paid">Paid</option>
                                             <option value="overdue">Overdue</option>
                                         </select>
+                                    </div>
+
+                                    <div>
+                                        <InputLabel htmlFor="notes">Notes</InputLabel>
+                                        <textarea
+                                            id="notes"
+                                            value={data.notes}
+                                            onChange={(e) => setData('notes', e.target.value)}
+                                            disabled={!invoice.can_be_modified}
+                                            rows={3}
+                                            className={`mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm ${!invoice.can_be_modified ? 'bg-gray-100' : ''}`}
+                                            placeholder="Optional notes for this invoice"
+                                        />
+                                        <InputError message={errors.notes} className="mt-2" />
                                     </div>
                                 </div>
                             </div>
@@ -214,8 +225,8 @@ export default function Edit({ invoice, clients }) {
                                     <div className="space-y-4">
                                         {data.items.map((item, index) => (
                                             <div key={index} className="border rounded-lg p-4">
-                                                <div className="grid grid-cols-12 gap-2 items-end">
-                                                    <div className="col-span-6">
+                                                <div className="grid grid-cols-12 gap-6 items-end">
+                                                    <div className="col-span-5">
                                                         <InputLabel>Description</InputLabel>
                                                         <TextInput
                                                             value={item.description}
@@ -225,7 +236,7 @@ export default function Edit({ invoice, clients }) {
                                                         />
                                                         <InputError message={errors[`items.${index}.description`]} className="mt-2" />
                                                     </div>
-                                                    <div className="col-span-2">
+                                                    <div className="col-span-3">
                                                         <InputLabel>Quantity</InputLabel>
                                                         <TextInput
                                                             type="number"
@@ -237,7 +248,7 @@ export default function Edit({ invoice, clients }) {
                                                         />
                                                         <InputError message={errors[`items.${index}.quantity`]} className="mt-2" />
                                                     </div>
-                                                    <div className="col-span-2">
+                                                    <div className="col-span-3">
                                                         <InputLabel>Unit Price</InputLabel>
                                                         <TextInput
                                                             type="number"
@@ -249,14 +260,18 @@ export default function Edit({ invoice, clients }) {
                                                         />
                                                         <InputError message={errors[`items.${index}.unit_price`]} className="mt-2" />
                                                     </div>
-                                                    <div className="col-span-2">
-                                                        <DangerButton
+                                                    <div className="col-span-1 flex items-end">
+                                                        <button
                                                             type="button"
                                                             onClick={() => removeItem(index)}
                                                             disabled={data.items.length === 1 || !invoice.can_be_modified}
+                                                            className="w-10 h-10 flex items-center justify-center rounded-lg border border-red-300 bg-red-50 text-red-600 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                                                            title="Remove item"
                                                         >
-                                                            Delete
-                                                        </DangerButton>
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -280,6 +295,10 @@ export default function Edit({ invoice, clients }) {
                                         <div className="flex justify-between">
                                             <span>Tax (10%):</span>
                                             <span>${parseFloat(tax).toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Discount:</span>
+                                            <span>$0.00</span>
                                         </div>
                                         <div className="flex justify-between font-bold text-lg border-t pt-2">
                                             <span>Total:</span>

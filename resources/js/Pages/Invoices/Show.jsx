@@ -79,6 +79,7 @@ export default function Show({ invoice }) {
 
     const startEditingItem = (item) => {
         setEditingItem({
+            id: item.id,
             description: item.description,
             quantity: item.quantity,
             unit_price: item.unit_price,
@@ -96,15 +97,15 @@ export default function Show({ invoice }) {
 
     return (
         <AuthenticatedLayout>
-            <Head title={`Invoice ${invoice.number}`} />
+            <Head title={`Invoice ${invoice.invoice_number}`} />
 
-            <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 pt-8">
                 <div className="flex items-center gap-4 mb-6">
                     <Link href={route('invoices.index')}>
                         <SecondaryButton>← Back to Invoices</SecondaryButton>
                     </Link>
                     <h1 className="text-2xl font-semibold text-gray-900">
-                        Invoice {invoice.number}
+                        Invoice {invoice.invoice_number}
                     </h1>
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusColors[invoice.status]}`}>
                         {invoice.status}
@@ -130,8 +131,8 @@ export default function Show({ invoice }) {
                             <div className="p-6">
                                 {isAddingItem && (
                                     <div className="border rounded-lg p-4 mb-4 bg-gray-50">
-                                        <div className="grid grid-cols-12 gap-2 items-end">
-                                            <div className="col-span-6">
+                                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
+                                            <div className="lg:col-span-5">
                                                 <InputLabel>Description</InputLabel>
                                                 <TextInput
                                                     value={newItem.description}
@@ -144,7 +145,7 @@ export default function Show({ invoice }) {
                                                     placeholder="Item description"
                                                 />
                                             </div>
-                                            <div className="col-span-2">
+                                            <div className="lg:col-span-2">
                                                 <InputLabel>Quantity</InputLabel>
                                                 <TextInput
                                                     type="number"
@@ -159,7 +160,7 @@ export default function Show({ invoice }) {
                                                     placeholder="1"
                                                 />
                                             </div>
-                                            <div className="col-span-2">
+                                            <div className="lg:col-span-2">
                                                 <InputLabel>Unit Price</InputLabel>
                                                 <TextInput
                                                     type="number"
@@ -174,7 +175,7 @@ export default function Show({ invoice }) {
                                                     placeholder="0.00"
                                                 />
                                             </div>
-                                            <div className="col-span-2 flex gap-2">
+                                            <div className="lg:col-span-3 flex gap-2">
                                                 <PrimaryButton onClick={handleAddItem}>Save</PrimaryButton>
                                                 <SecondaryButton onClick={cancelAdding}>Cancel</SecondaryButton>
                                             </div>
@@ -216,6 +217,7 @@ export default function Show({ invoice }) {
                                                                         description: e.target.value,
                                                                     })
                                                                 }
+                                                                className="w-full"
                                                             />
                                                         ) : (
                                                             item.description
@@ -233,6 +235,7 @@ export default function Show({ invoice }) {
                                                                         quantity: e.target.value,
                                                                     })
                                                                 }
+                                                                className="w-24"
                                                             />
                                                         ) : (
                                                             item.quantity
@@ -250,6 +253,7 @@ export default function Show({ invoice }) {
                                                                         unit_price: e.target.value,
                                                                     })
                                                                 }
+                                                                className="w-24"
                                                             />
                                                         ) : (
                                                             `$${parseFloat(item.unit_price).toFixed(2)}`
@@ -319,12 +323,12 @@ export default function Show({ invoice }) {
 
                                 <div>
                                     <InputLabel className="text-sm font-medium text-gray-500">Issue Date</InputLabel>
-                                    <p className="font-medium">{invoice.issued_at}</p>
+                                    <p className="font-medium">{new Date(invoice.issue_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                                 </div>
 
                                 <div>
                                     <InputLabel className="text-sm font-medium text-gray-500">Due Date</InputLabel>
-                                    <p className="font-medium">{invoice.due_at}</p>
+                                    <p className="font-medium">{new Date(invoice.due_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
                                 </div>
 
                                 <hr />
@@ -338,11 +342,24 @@ export default function Show({ invoice }) {
                                         <span>Tax (10%):</span>
                                         <span>${parseFloat(invoice.tax).toFixed(2)}</span>
                                     </div>
+                                    <div className="flex justify-between">
+                                        <span>Discount:</span>
+                                        <span>${parseFloat(invoice.discount || 0).toFixed(2)}</span>
+                                    </div>
                                     <div className="flex justify-between font-bold text-lg">
                                         <span>Total:</span>
                                         <span>${parseFloat(invoice.total).toFixed(2)}</span>
                                     </div>
                                 </div>
+                                {invoice.notes && (
+                                    <>
+                                        <hr />
+                                        <div>
+                                            <InputLabel className="text-sm font-medium text-gray-500">Notes</InputLabel>
+                                            <p className="text-gray-700 whitespace-pre-wrap">{invoice.notes}</p>
+                                        </div>
+                                    </>
+                                )}
 
                                 <hr />
 

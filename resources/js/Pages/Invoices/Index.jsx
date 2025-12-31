@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
+import TextInput from '@/Components/TextInput';
+import InputLabel from '@/Components/InputLabel';
 
 const statusColors = {
     draft: 'bg-gray-100 text-gray-800',
@@ -12,23 +14,87 @@ const statusColors = {
     overdue: 'bg-red-100 text-red-800',
 };
 
-export default function Index({ invoices }) {
+const statusLabels = {
+    draft: 'Draft',
+    sent: 'Sent',
+    paid: 'Paid',
+    overdue: 'Overdue',
+};
+
+export default function Index({ invoices, filters }) {
+    const [search, setSearch] = useState(filters.search || '');
+    const [status, setStatus] = useState(filters.status || '');
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        router.get(
+            route('invoices.index'),
+            { search, status },
+            { preserveState: true, replace: true }
+        );
+    };
+
     const handleDelete = (invoice) => {
-        if (confirm('Are you sure you want to delete this invoice?')) {
+        if (confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
             router.delete(route('invoices.destroy', invoice.id));
         }
+    };
+
+    const clearFilters = () => {
+        setSearch('');
+        setStatus('');
+        router.get(route('invoices.index'), {}, { preserveState: true, replace: true });
     };
 
     return (
         <AuthenticatedLayout>
             <Head title="Invoices" />
 
-            <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center mb-6">
+            <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 pt-8">
+                <div className="flex items-center justify-between mb-6">
                     <h1 className="text-2xl font-semibold text-gray-900">Invoices</h1>
                     <Link href={route('invoices.create')}>
-                        <PrimaryButton>New Invoice</PrimaryButton>
+                        <PrimaryButton>Create Invoice</PrimaryButton>
                     </Link>
+                </div>
+
+                {/* Filters */}
+                <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
+                    <div className="p-6">
+                        <form onSubmit={handleSearch} className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <InputLabel>Search</InputLabel>
+                                    <TextInput
+                                        type="text"
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        placeholder="Invoice number or client name"
+                                    />
+                                </div>
+                                <div>
+                                    <InputLabel>Status</InputLabel>
+                                    <select
+                                        value={status}
+                                        onChange={(e) => setStatus(e.target.value)}
+                                        className="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                                    >
+                                        <option value="">All Status</option>
+                                        <option value="draft">Draft</option>
+                                        <option value="sent">Sent</option>
+                                        <option value="paid">Paid</option>
+                                        <option value="overdue">Overdue</option>
+                                    </select>
+                                </div>
+                                <div className="flex items-end gap-2">
+                                    <PrimaryButton type="submit">Search</PrimaryButton>
+                                    <SecondaryButton type="button" onClick={clearFilters}>
+                                        Clear
+                                    </SecondaryButton>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
                 <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
@@ -49,7 +115,7 @@ export default function Index({ invoices }) {
                                     <thead className="bg-gray-50">
                                         <tr>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Number
+                                                Invoice Number
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Client
@@ -61,10 +127,10 @@ export default function Index({ invoices }) {
                                                 Total
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Issued
+                                                Issue Date
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Due
+                                                Due Date
                                             </th>
                                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Actions
@@ -75,24 +141,24 @@ export default function Index({ invoices }) {
                                         {invoices.data.map((invoice) => (
                                             <tr key={invoice.id}>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                    {invoice.number}
+                                                    {invoice.invoice_number}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {invoice.client.name}
+                                                    {invoice.client?.name || 'N/A'}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusColors[invoice.status]}`}>
-                                                        {invoice.status}
+                                                        {statusLabels[invoice.status]}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                     ${parseFloat(invoice.total).toFixed(2)}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {invoice.issued_at}
+                                                    {new Date(invoice.issue_date).toLocaleDateString()}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {invoice.due_at}
+                                                    {new Date(invoice.due_date).toLocaleDateString()}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                     <div className="flex justify-end gap-2">
@@ -100,11 +166,17 @@ export default function Index({ invoices }) {
                                                             <SecondaryButton>View</SecondaryButton>
                                                         </Link>
                                                         <Link href={route('invoices.edit', invoice.id)}>
-                                                            <SecondaryButton>Edit</SecondaryButton>
+                                                            <SecondaryButton 
+                                                                disabled={!invoice.can_be_modified}
+                                                                className={!invoice.can_be_modified ? 'opacity-50 cursor-not-allowed' : ''}
+                                                            >
+                                                                Edit
+                                                            </SecondaryButton>
                                                         </Link>
                                                         <DangerButton
                                                             onClick={() => handleDelete(invoice)}
-                                                            disabled={invoice.status === 'paid'}
+                                                            disabled={!invoice.can_be_modified}
+                                                            className={!invoice.can_be_modified ? 'opacity-50 cursor-not-allowed' : ''}
                                                         >
                                                             Delete
                                                         </DangerButton>
