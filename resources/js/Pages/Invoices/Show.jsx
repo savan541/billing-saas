@@ -101,6 +101,10 @@ export default function Show({ invoice }) {
         setIsAddingItem(false);
     };
 
+    const handleDownloadPdf = () => {
+        window.open(route('invoices.download', invoice.id), '_blank');
+    };
+
     return (
         <AuthenticatedLayout>
             <Head title={`Invoice ${invoice.invoice_number}`} />
@@ -383,6 +387,12 @@ export default function Show({ invoice }) {
                                 <hr />
 
                                 <div className="flex justify-end gap-2">
+                                    <SecondaryButton
+                                        onClick={handleDownloadPdf}
+                                        disabled={false}
+                                    >
+                                        Download PDF
+                                    </SecondaryButton>
                                     <Link href={route('invoices.edit', invoice.id)}>
                                         <PrimaryButton
                                             disabled={!invoice.can_be_modified}

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Events\InvoiceCreated;
 use App\Events\InvoicePaid;
+use App\Services\InvoicePdfService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -180,6 +181,11 @@ class Invoice extends Model
             if ($invoice->wasChanged('status') && $invoice->status === 'paid') {
                 InvoicePaid::dispatch($invoice);
             }
+        });
+
+        static::deleting(function ($invoice) {
+            $pdfService = app(InvoicePdfService::class);
+            $pdfService->deletePdf($invoice);
         });
     }
 

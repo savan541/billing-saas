@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function () {
         Route::put('items/{item}', [InvoiceItemsController::class, 'update'])->name('invoices.items.update');
         Route::delete('items/{item}', [InvoiceItemsController::class, 'destroy'])->name('invoices.items.destroy');
         Route::post('payments', [PaymentController::class, 'store'])->name('invoices.payments.store');
+        Route::get('download', [InvoicesController::class, 'download'])->name('invoices.download');
     });
 
     Route::prefix('recurring-invoices/{recurring_invoice}')->group(function () {

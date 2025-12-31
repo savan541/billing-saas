@@ -5,15 +5,19 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Http\Requests\UpdateInvoiceRequest;
 use App\Models\Invoice;
+use App\Services\InvoicePdfService;
 use App\Services\InvoiceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class InvoicesController extends Controller
 {
-    public function __construct(private InvoiceService $invoiceService)
-    {
+    public function __construct(
+    private InvoiceService $invoiceService,
+    private InvoicePdfService $pdfService
+    ) {
         $this->authorizeResource(Invoice::class, 'invoice');
     }
 
@@ -97,5 +101,21 @@ class InvoicesController extends Controller
 
         return redirect()->route('invoices.index')
             ->with('success', 'Invoice deleted successfully.');
+    }
+
+    public function download(Invoice $invoice)
+    {
+        $this->authorize('view', $invoice);
+        
+        try {
+            $pdfPath = $this->pdfService->generatePdf($invoice);
+            
+            return Storage::disk('local')->download(
+                $pdfPath,
+                "invoice-{$invoice->invoice_number}.pdf"
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', 'Cannot download PDF for draft invoices.');
+        }
     }
 }
