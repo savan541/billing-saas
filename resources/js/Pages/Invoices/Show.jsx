@@ -6,6 +6,7 @@ import SecondaryButton from '@/Components/SecondaryButton';
 import DangerButton from '@/Components/DangerButton';
 import TextInput from '@/Components/TextInput';
 import InputLabel from '@/Components/InputLabel';
+import RecordPaymentModal from '@/Components/RecordPaymentModal';
 
 const statusColors = {
     draft: 'bg-gray-100 text-gray-800',
@@ -16,6 +17,7 @@ const statusColors = {
 
 export default function Show({ invoice }) {
     const [items, setItems] = useState(invoice.items);
+    const [payments, setPayments] = useState(invoice.payments || []);
     const [editingItem, setEditingItem] = useState(null);
     const [newItem, setNewItem] = useState({
         description: '',
@@ -23,6 +25,7 @@ export default function Show({ invoice }) {
         unit_price: '',
     });
     const [isAddingItem, setIsAddingItem] = useState(false);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
 
     const handleAddItem = () => {
         if (!newItem.description || !newItem.quantity || !newItem.unit_price) {
@@ -35,6 +38,7 @@ export default function Show({ invoice }) {
             {
                 onSuccess: (page) => {
                     setItems(page.props.invoice.items);
+                    setPayments(page.props.invoice.payments || []);
                     setNewItem({ description: '', quantity: '', unit_price: '' });
                     setIsAddingItem(false);
                 },
@@ -52,6 +56,7 @@ export default function Show({ invoice }) {
             {
                 onSuccess: (page) => {
                     setItems(page.props.invoice.items);
+                    setPayments(page.props.invoice.payments || []);
                     setEditingItem(null);
                 },
                 onError: (errors) => {
@@ -68,6 +73,7 @@ export default function Show({ invoice }) {
                 {
                     onSuccess: (page) => {
                         setItems(page.props.invoice.items);
+                        setPayments(page.props.invoice.payments || []);
                     },
                     onError: (errors) => {
                         console.error(errors);
@@ -346,10 +352,23 @@ export default function Show({ invoice }) {
                                         <span>Discount:</span>
                                         <span>${parseFloat(invoice.discount || 0).toFixed(2)}</span>
                                     </div>
-                                    <div className="flex justify-between font-bold text-lg">
+                                    <div className="flex justify-between">
                                         <span>Total:</span>
                                         <span>${parseFloat(invoice.total).toFixed(2)}</span>
                                     </div>
+                                    {(invoice.total_paid > 0 || invoice.payments?.length > 0) && (
+                                        <>
+                                            <hr />
+                                            <div className="flex justify-between text-green-600">
+                                                <span>Total Paid:</span>
+                                                <span>${parseFloat(invoice.total_paid || 0).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between font-bold text-lg">
+                                                <span>Remaining Balance:</span>
+                                                <span>${parseFloat(invoice.total - (invoice.total_paid || 0)).toFixed(2)}</span>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                                 {invoice.notes && (
                                     <>
@@ -363,7 +382,7 @@ export default function Show({ invoice }) {
 
                                 <hr />
 
-                                <div className="flex gap-2">
+                                <div className="flex justify-end gap-2">
                                     <Link href={route('invoices.edit', invoice.id)}>
                                         <PrimaryButton
                                             disabled={!invoice.can_be_modified}
@@ -371,11 +390,60 @@ export default function Show({ invoice }) {
                                             Edit Invoice
                                         </PrimaryButton>
                                     </Link>
+                                    {invoice.status !== 'paid' && (
+                                        <PrimaryButton
+                                            onClick={() => setShowPaymentModal(true)}
+                                        >
+                                            Record Payment
+                                        </PrimaryButton>
+                                    )}
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    {payments.length > 0 && (
+                        <div className="lg:col-span-3">
+                            <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                                <div className="p-6 bg-white border-b border-gray-200">
+                                    <h2 className="text-xl font-semibold text-gray-800">Payment History</h2>
+                                </div>
+                                <div className="p-6">
+                                    <div className="space-y-3">
+                                        {payments.map((payment) => (
+                                            <div key={payment.id} className="border rounded-lg p-4">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <div className="font-medium text-lg">
+                                                            ${parseFloat(payment.amount).toFixed(2)}
+                                                        </div>
+                                                        <div className="text-sm text-gray-600">
+                                                            {payment.payment_method_label} • {new Date(payment.payment_date).toLocaleDateString()}
+                                                        </div>
+                                                        {payment.notes && (
+                                                            <div className="text-sm text-gray-500 mt-1">
+                                                                {payment.notes}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-sm text-gray-500">
+                                                        {new Date(payment.created_at).toLocaleDateString()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
+
+                <RecordPaymentModal
+                    invoice={invoice}
+                    show={showPaymentModal}
+                    onClose={() => setShowPaymentModal(false)}
+                />
             </div>
         </AuthenticatedLayout>
     );

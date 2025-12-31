@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\InvoicesController;
 use App\Http\Controllers\InvoiceItemsController;
+use App\Http\Controllers\PaymentController;
 use App\Services\ClientService;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -46,6 +47,7 @@ Route::middleware('auth')->group(function () {
         Route::post('items', [InvoiceItemsController::class, 'store'])->name('invoices.items.store');
         Route::put('items/{item}', [InvoiceItemsController::class, 'update'])->name('invoices.items.update');
         Route::delete('items/{item}', [InvoiceItemsController::class, 'destroy'])->name('invoices.items.destroy');
+        Route::post('payments', [PaymentController::class, 'store'])->name('invoices.payments.store');
     });
 });
 

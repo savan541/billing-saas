@@ -23,6 +23,7 @@ class Invoice extends Model
         'issue_date',
         'due_date',
         'notes',
+        'paid_at',
     ];
 
     protected $casts = [
@@ -32,9 +33,10 @@ class Invoice extends Model
         'total' => 'decimal:2',
         'issue_date' => 'date',
         'due_date' => 'date',
+        'paid_at' => 'datetime',
     ];
 
-    protected $appends = ['can_be_modified'];
+    protected $appends = ['can_be_modified', 'total_paid', 'remaining_balance'];
 
     public function user(): BelongsTo
     {
@@ -49,6 +51,11 @@ class Invoice extends Model
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
     }
 
     public function isDraft(): bool
@@ -95,6 +102,55 @@ class Invoice extends Model
     public function getFormattedTotal(): string
     {
         return '$' . number_format($this->total, 2);
+    }
+
+    public function getTotalPaid(): float
+    {
+        return $this->payments()->sum('amount');
+    }
+
+    public function getTotalPaidAttribute(): float
+    {
+        return $this->getTotalPaid();
+    }
+
+    public function getRemainingBalance(): float
+    {
+        return max(0, $this->total - $this->getTotalPaid());
+    }
+
+    public function getRemainingBalanceAttribute(): float
+    {
+        return $this->getRemainingBalance();
+    }
+
+    public function getFormattedTotalPaid(): string
+    {
+        return '$' . number_format($this->getTotalPaid(), 2);
+    }
+
+    public function getFormattedRemainingBalance(): string
+    {
+        return '$' . number_format($this->getRemainingBalance(), 2);
+    }
+
+    public function isFullyPaid(): bool
+    {
+        return $this->getTotalPaid() >= $this->total;
+    }
+
+    public function updatePaymentStatus(): void
+    {
+        if ($this->isFullyPaid() && !$this->isPaid()) {
+            $this->status = 'paid';
+            $this->paid_at = now();
+            $this->save();
+        }
+    }
+
+    public function canAcceptPayment(float $amount): bool
+    {
+        return ($this->getTotalPaid() + $amount) <= $this->total;
     }
 
     protected static function boot()
