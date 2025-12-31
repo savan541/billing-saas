@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\RecurringInvoiceGenerated;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -143,6 +144,8 @@ class RecurringInvoice extends Model
         $this->last_run_date = now();
         $this->next_run_date = $this->calculateNextRunDate();
         $this->save();
+
+        RecurringInvoiceGenerated::dispatch($invoice, $this);
 
         return $invoice;
     }

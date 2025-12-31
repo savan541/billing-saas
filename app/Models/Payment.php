@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\PaymentRecorded;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -48,5 +49,14 @@ class Payment extends Model
             'card' => 'Card',
             default => ucfirst($this->payment_method),
         };
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::created(function ($payment) {
+            PaymentRecorded::dispatch($payment);
+        });
     }
 }

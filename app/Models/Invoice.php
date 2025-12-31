@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Events\InvoiceCreated;
+use App\Events\InvoicePaid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -165,6 +167,18 @@ class Invoice extends Model
         static::creating(function ($invoice) {
             if (empty($invoice->invoice_number)) {
                 $invoice->invoice_number = $invoice->generateInvoiceNumber();
+            }
+        });
+
+        static::created(function ($invoice) {
+            if ($invoice->status !== 'draft') {
+                InvoiceCreated::dispatch($invoice);
+            }
+        });
+
+        static::updated(function ($invoice) {
+            if ($invoice->wasChanged('status') && $invoice->status === 'paid') {
+                InvoicePaid::dispatch($invoice);
             }
         });
     }

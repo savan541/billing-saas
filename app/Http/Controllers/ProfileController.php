@@ -41,6 +41,28 @@ class ProfileController extends Controller
     }
 
     /**
+     * Update the user's email notification settings.
+     */
+    public function updateEmailSettings(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'email_notifications_enabled' => 'required|boolean',
+            'email_notification_preferences' => 'required|array',
+            'email_notification_preferences.invoice_created' => 'required|boolean',
+            'email_notification_preferences.invoice_paid' => 'required|boolean',
+            'email_notification_preferences.payment_receipt' => 'required|boolean',
+            'email_notification_preferences.recurring_invoice_generated' => 'required|boolean',
+        ]);
+
+        $user = $request->user();
+        $user->email_notifications_enabled = $validated['email_notifications_enabled'];
+        $user->email_notification_preferences = $validated['email_notification_preferences'];
+        $user->save();
+
+        return Redirect::route('profile.edit')->with('status', 'email-settings-updated');
+    }
+
+    /**
      * Delete the user's account.
      */
     public function destroy(Request $request): RedirectResponse
