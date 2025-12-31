@@ -58,6 +58,11 @@ class Invoice extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function recurringInvoice(): BelongsTo
+    {
+        return $this->belongsTo(RecurringInvoice::class);
+    }
+
     public function isDraft(): bool
     {
         return $this->status === 'draft';

@@ -7,7 +7,9 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Gate;
 use App\Policies\ClientPolicy;
+use App\Policies\RecurringInvoicePolicy;
 use App\Models\Client;
+use App\Models\RecurringInvoice;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -35,5 +37,6 @@ class AppServiceProvider extends ServiceProvider
     protected function registerPolicies()
     {
         Gate::policy(Client::class, ClientPolicy::class);
+        Gate::policy(RecurringInvoice::class, RecurringInvoicePolicy::class);
     }
 }

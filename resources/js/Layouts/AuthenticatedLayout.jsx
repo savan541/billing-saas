@@ -42,6 +42,12 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     Invoices
                                 </NavLink>
+                                <NavLink
+                                    href={route('recurring-invoices.index')}
+                                    active={route().current('recurring-invoices.*')}
+                                >
+                                    Recurring Invoices
+                                </NavLink>
                             </div>
                         </div>
 
@@ -157,6 +163,12 @@ export default function AuthenticatedLayout({ header, children }) {
                             active={route().current('invoices.*')}
                         >
                             Invoices
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            href={route('recurring-invoices.index')}
+                            active={route().current('recurring-invoices.*')}
+                        >
+                            Recurring Invoices
                         </ResponsiveNavLink>
                     </div>
 
