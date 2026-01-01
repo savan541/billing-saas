@@ -12,6 +12,7 @@ const statusColors = {
     sent: 'bg-blue-100 text-blue-800',
     paid: 'bg-green-100 text-green-800',
     overdue: 'bg-red-100 text-red-800',
+    cancelled: 'bg-gray-100 text-gray-800',
 };
 
 const statusLabels = {
@@ -19,6 +20,7 @@ const statusLabels = {
     sent: 'Sent',
     paid: 'Paid',
     overdue: 'Overdue',
+    cancelled: 'Cancelled',
 };
 
 export default function Index({ invoices, filters }) {
@@ -84,6 +86,7 @@ export default function Index({ invoices, filters }) {
                                         <option value="sent">Sent</option>
                                         <option value="paid">Paid</option>
                                         <option value="overdue">Overdue</option>
+                                        <option value="cancelled">Cancelled</option>
                                     </select>
                                 </div>
                                 <div className="flex items-end gap-2">

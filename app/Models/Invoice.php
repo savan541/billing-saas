@@ -3,8 +3,10 @@
 namespace App\Models;
 
 use App\Enums\Currency;
+use App\Enums\InvoiceStatus;
 use App\Events\InvoiceCreated;
 use App\Events\InvoicePaid;
+use App\Services\InvoiceActivityService;
 use App\Services\InvoicePdfService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -46,6 +48,7 @@ class Invoice extends Model
         'invoice_tax_rate' => 'decimal:4',
         'tax_exempt_at_time' => 'boolean',
         'currency' => Currency::class,
+        'status' => InvoiceStatus::class,
     ];
 
     protected $appends = ['can_be_modified', 'total_paid', 'remaining_balance'];
@@ -70,6 +73,11 @@ class Invoice extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function activities(): HasMany
+    {
+        return $this->hasMany(InvoiceActivity::class)->orderBy('created_at', 'desc');
+    }
+
     public function recurringInvoice(): BelongsTo
     {
         return $this->belongsTo(RecurringInvoice::class);
@@ -77,27 +85,32 @@ class Invoice extends Model
 
     public function isDraft(): bool
     {
-        return $this->status === 'draft';
+        return $this->status === InvoiceStatus::DRAFT;
     }
 
     public function isSent(): bool
     {
-        return $this->status === 'sent';
+        return $this->status === InvoiceStatus::SENT;
     }
 
     public function isPaid(): bool
     {
-        return $this->status === 'paid';
+        return $this->status === InvoiceStatus::PAID;
     }
 
     public function isOverdue(): bool
     {
-        return $this->status === 'overdue';
+        return $this->status === InvoiceStatus::OVERDUE;
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === InvoiceStatus::CANCELLED;
     }
 
     public function canBeModified(): bool
     {
-        return !$this->isPaid();
+        return $this->status?->isEditable() ?? false;
     }
 
     public function getCanBeModifiedAttribute(): bool
@@ -107,13 +120,7 @@ class Invoice extends Model
 
     public function getStatusColor(): string
     {
-        return match($this->status) {
-            'draft' => 'gray',
-            'sent' => 'blue',
-            'paid' => 'green',
-            'overdue' => 'red',
-            default => 'gray',
-        };
+        return $this->status?->getColor() ?? 'gray';
     }
 
     public function getFormattedTotal(): string
@@ -201,7 +208,7 @@ class Invoice extends Model
     public function updatePaymentStatus(): void
     {
         if ($this->isFullyPaid() && !$this->isPaid()) {
-            $this->status = 'paid';
+            $this->status = InvoiceStatus::PAID;
             $this->paid_at = now();
             $this->save();
         }
@@ -210,6 +217,59 @@ class Invoice extends Model
     public function canAcceptPayment(float $amount): bool
     {
         return ($this->getTotalPaid() + $amount) <= $this->total;
+    }
+
+    public function canBeSent(): bool
+    {
+        return $this->status?->canBeSent() ?? false;
+    }
+
+    public function canBePaid(): bool
+    {
+        return $this->status?->canBePaid() ?? false;
+    }
+
+    public function canBeCancelled(): bool
+    {
+        return $this->status?->canBeCancelled() ?? false;
+    }
+
+    public function canBeMarkedAsPaid(): bool
+    {
+        return $this->status?->canBeMarkedAsPaid() ?? false;
+    }
+
+    public function markAsSent(): void
+    {
+        if ($this->canBeSent()) {
+            $this->status = InvoiceStatus::SENT;
+            $this->save();
+        }
+    }
+
+    public function markAsPaid(): void
+    {
+        if ($this->canBeMarkedAsPaid()) {
+            $this->status = InvoiceStatus::PAID;
+            $this->paid_at = now();
+            $this->save();
+        }
+    }
+
+    public function cancel(): void
+    {
+        if ($this->canBeCancelled()) {
+            $this->status = InvoiceStatus::CANCELLED;
+            $this->save();
+        }
+    }
+
+    public function checkOverdue(): void
+    {
+        if ($this->isSent() && $this->due_date && $this->due_date->isPast()) {
+            $this->status = InvoiceStatus::OVERDUE;
+            $this->save();
+        }
     }
 
     protected static function boot()
@@ -223,18 +283,40 @@ class Invoice extends Model
         });
 
         static::created(function ($invoice) {
-            if ($invoice->status !== 'draft') {
+            app(InvoiceActivityService::class)->logCreated($invoice);
+            
+            if ($invoice->status !== InvoiceStatus::DRAFT) {
                 InvoiceCreated::dispatch($invoice);
             }
         });
 
         static::updated(function ($invoice) {
-            if ($invoice->wasChanged('status') && $invoice->status === 'paid') {
-                InvoicePaid::dispatch($invoice);
+            $activityService = app(InvoiceActivityService::class);
+            
+            if ($invoice->wasChanged('status')) {
+                switch ($invoice->status) {
+                    case InvoiceStatus::PAID:
+                        $activityService->logPaid($invoice);
+                        InvoicePaid::dispatch($invoice);
+                        break;
+                    case InvoiceStatus::SENT:
+                        $activityService->logSent($invoice);
+                        break;
+                    case InvoiceStatus::CANCELLED:
+                        $activityService->logCancelled($invoice);
+                        break;
+                }
+            }
+            
+            if ($invoice->wasChanged(['subtotal', 'tax', 'discount', 'total', 'due_date'])) {
+                $changes = $invoice->getChanges();
+                $activityService->logUpdated($invoice, $changes);
             }
         });
 
         static::deleting(function ($invoice) {
+            app(InvoiceActivityService::class)->logDeleted($invoice);
+            
             $pdfService = app(InvoicePdfService::class);
             $pdfService->deletePdf($invoice);
         });

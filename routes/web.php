@@ -55,6 +55,11 @@ Route::middleware('auth')->group(function () {
         Route::post('payments', [PaymentController::class, 'store'])->name('invoices.payments.store');
         Route::get('download', [InvoicesController::class, 'download'])->name('invoices.download');
         
+        // Invoice lifecycle routes
+        Route::post('send', [InvoicesController::class, 'send'])->name('invoices.send');
+        Route::post('cancel', [InvoicesController::class, 'cancel'])->name('invoices.cancel');
+        Route::post('mark-as-paid', [InvoicesController::class, 'markAsPaid'])->name('invoices.mark-as-paid');
+        
         // Stripe payment routes
         Route::post('payment/checkout', [InvoicePaymentController::class, 'createCheckoutSession'])->name('invoices.payment.checkout');
         Route::get('payment/success', [InvoicePaymentController::class, 'success'])->name('invoices.payment.success');

@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('recurring:run')->daily()->description('Generate invoices from recurring templates');
+Schedule::command('invoices:check-overdue')->daily()->description('Check for overdue invoices');

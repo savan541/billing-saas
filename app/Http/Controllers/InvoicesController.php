@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Http\Requests\UpdateInvoiceRequest;
 use App\Models\Invoice;
+use App\Services\InvoiceActivityService;
 use App\Services\InvoicePdfService;
 use App\Services\InvoiceService;
 use Illuminate\Http\Request;
@@ -16,7 +17,8 @@ class InvoicesController extends Controller
 {
     public function __construct(
     private InvoiceService $invoiceService,
-    private InvoicePdfService $pdfService
+    private InvoicePdfService $pdfService,
+    private InvoiceActivityService $activityService
     ) {
         $this->authorizeResource(Invoice::class, 'invoice');
     }
@@ -67,10 +69,11 @@ class InvoicesController extends Controller
 
     public function show(Invoice $invoice)
     {
-        $invoice->load(['client', 'items', 'payments']);
+        $invoice->load(['client', 'items', 'payments', 'activities']);
 
         return Inertia::render('Invoices/Show', [
             'invoice' => $invoice,
+            'activities' => $this->activityService->getTimeline($invoice),
         ]);
     }
 
@@ -109,6 +112,7 @@ class InvoicesController extends Controller
         
         try {
             $pdfPath = $this->pdfService->generatePdf($invoice);
+            $this->activityService->logPdfGenerated($invoice);
             
             return Storage::disk('local')->download(
                 $pdfPath,
@@ -117,5 +121,35 @@ class InvoicesController extends Controller
         } catch (\InvalidArgumentException $e) {
             return back()->with('error', 'Cannot download PDF for draft invoices.');
         }
+    }
+
+    public function send(Invoice $invoice)
+    {
+        $this->authorize('send', $invoice);
+
+        $invoice->markAsSent();
+        
+        return redirect()->route('invoices.show', $invoice)
+            ->with('success', 'Invoice sent successfully.');
+    }
+
+    public function cancel(Invoice $invoice)
+    {
+        $this->authorize('cancel', $invoice);
+
+        $invoice->cancel();
+        
+        return redirect()->route('invoices.show', $invoice)
+            ->with('success', 'Invoice cancelled successfully.');
+    }
+
+    public function markAsPaid(Invoice $invoice)
+    {
+        $this->authorize('markAsPaid', $invoice);
+
+        $invoice->markAsPaid();
+        
+        return redirect()->route('invoices.show', $invoice)
+            ->with('success', 'Invoice marked as paid successfully.');
     }
 }

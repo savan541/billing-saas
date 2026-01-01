@@ -74,4 +74,43 @@ class InvoicePolicy
 
         return Response::allow();
     }
+
+    public function send(User $user, Invoice $invoice): Response
+    {
+        if ($user->id !== $invoice->user_id) {
+            return Response::deny('You can only send your own invoices.');
+        }
+
+        if (!$invoice->canBeSent()) {
+            return Response::deny('This invoice cannot be sent.');
+        }
+
+        return Response::allow();
+    }
+
+    public function cancel(User $user, Invoice $invoice): Response
+    {
+        if ($user->id !== $invoice->user_id) {
+            return Response::deny('You can only cancel your own invoices.');
+        }
+
+        if (!$invoice->canBeCancelled()) {
+            return Response::deny('This invoice cannot be cancelled.');
+        }
+
+        return Response::allow();
+    }
+
+    public function markAsPaid(User $user, Invoice $invoice): Response
+    {
+        if ($user->id !== $invoice->user_id) {
+            return Response::deny('You can only mark your own invoices as paid.');
+        }
+
+        if (!$invoice->canBeMarkedAsPaid()) {
+            return Response::deny('This invoice cannot be marked as paid.');
+        }
+
+        return Response::allow();
+    }
 }

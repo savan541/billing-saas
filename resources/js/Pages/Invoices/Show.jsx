@@ -13,9 +13,18 @@ const statusColors = {
     sent: 'bg-blue-100 text-blue-800',
     paid: 'bg-green-100 text-green-800',
     overdue: 'bg-red-100 text-red-800',
+    cancelled: 'bg-gray-100 text-gray-800',
 };
 
-export default function Show({ invoice }) {
+const statusLabels = {
+    draft: 'Draft',
+    sent: 'Sent',
+    paid: 'Paid',
+    overdue: 'Overdue',
+    cancelled: 'Cancelled',
+};
+
+export default function Show({ invoice, activities }) {
     const [items, setItems] = useState(invoice.items);
     const [payments, setPayments] = useState(invoice.payments || []);
     const [editingItem, setEditingItem] = useState(null);
@@ -109,6 +118,24 @@ export default function Show({ invoice }) {
         router.post(route('invoices.payment.checkout', invoice.id));
     };
 
+    const handleSendInvoice = () => {
+        if (confirm('Are you sure you want to send this invoice to the client?')) {
+            router.post(route('invoices.send', invoice.id));
+        }
+    };
+
+    const handleCancelInvoice = () => {
+        if (confirm('Are you sure you want to cancel this invoice? This action cannot be undone.')) {
+            router.post(route('invoices.cancel', invoice.id));
+        }
+    };
+
+    const handleMarkAsPaid = () => {
+        if (confirm('Are you sure you want to mark this invoice as paid?')) {
+            router.post(route('invoices.mark-as-paid', invoice.id));
+        }
+    };
+
     return (
         <AuthenticatedLayout>
             <Head title={`Invoice ${invoice.invoice_number}`} />
@@ -122,7 +149,7 @@ export default function Show({ invoice }) {
                         Invoice {invoice.invoice_number}
                     </h1>
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusColors[invoice.status]}`}>
-                        {invoice.status}
+                        {statusLabels[invoice.status] || invoice.status}
                     </span>
                 </div>
 
@@ -401,6 +428,14 @@ export default function Show({ invoice }) {
                                     >
                                         Download PDF
                                     </SecondaryButton>
+                                    {invoice.status === 'draft' && (
+                                        <PrimaryButton
+                                            onClick={handleSendInvoice}
+                                            className="bg-blue-600 hover:bg-blue-700"
+                                        >
+                                            Send Invoice
+                                        </PrimaryButton>
+                                    )}
                                     <Link href={route('invoices.edit', invoice.id)}>
                                         <PrimaryButton
                                             disabled={!invoice.can_be_modified}
@@ -408,7 +443,7 @@ export default function Show({ invoice }) {
                                             Edit Invoice
                                         </PrimaryButton>
                                     </Link>
-                                    {invoice.status === 'sent' && (
+                                    {(invoice.status === 'sent' || invoice.status === 'overdue') && (
                                         <PrimaryButton
                                             onClick={handlePayInvoice}
                                             className="bg-green-600 hover:bg-green-700"
@@ -416,7 +451,22 @@ export default function Show({ invoice }) {
                                             Pay Invoice
                                         </PrimaryButton>
                                     )}
-                                    {invoice.status !== 'paid' && (
+                                    {(invoice.status === 'sent' || invoice.status === 'overdue') && (
+                                        <PrimaryButton
+                                            onClick={handleMarkAsPaid}
+                                            className="bg-green-600 hover:bg-green-700"
+                                        >
+                                            Mark as Paid
+                                        </PrimaryButton>
+                                    )}
+                                    {(invoice.status === 'draft' || invoice.status === 'sent' || invoice.status === 'overdue') && (
+                                        <DangerButton
+                                            onClick={handleCancelInvoice}
+                                        >
+                                            Cancel Invoice
+                                        </DangerButton>
+                                    )}
+                                    {invoice.status !== 'paid' && invoice.status !== 'cancelled' && (
                                         <PrimaryButton
                                             onClick={() => setShowPaymentModal(true)}
                                         >
@@ -455,6 +505,58 @@ export default function Show({ invoice }) {
                                                     <div className="text-sm text-gray-500">
                                                         {new Date(payment.created_at).toLocaleDateString()}
                                                     </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activities && activities.length > 0 && (
+                        <div className="lg:col-span-3">
+                            <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                                <div className="p-6 bg-white border-b border-gray-200">
+                                    <h2 className="text-xl font-semibold text-gray-800">Activity Timeline</h2>
+                                </div>
+                                <div className="p-6">
+                                    <div className="space-y-4">
+                                        {activities.map((activity) => (
+                                            <div key={activity.id} className="flex items-start space-x-3">
+                                                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm ${
+                                                    activity.color === 'blue' ? 'bg-blue-100 text-blue-600' :
+                                                    activity.color === 'green' ? 'bg-green-100 text-green-600' :
+                                                    activity.color === 'red' ? 'bg-red-100 text-red-600' :
+                                                    activity.color === 'yellow' ? 'bg-yellow-100 text-yellow-600' :
+                                                    'bg-gray-100 text-gray-600'
+                                                }`}>
+                                                    {activity.icon === 'plus-circle' && '+'}
+                                                    {activity.icon === 'paper-airplane' && '↑'}
+                                                    {activity.icon === 'check-circle' && '✓'}
+                                                    {activity.icon === 'banknotes' && '$'}
+                                                    {activity.icon === 'document-text' && '📄'}
+                                                    {activity.icon === 'x-circle' && '×'}
+                                                    {activity.icon === 'pencil' && '✏'}
+                                                    {activity.icon === 'trash' && '🗑'}
+                                                    {activity.icon === 'information-circle' && 'i'}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-sm font-medium text-gray-900">
+                                                        {activity.description}
+                                                    </div>
+                                                    <div className="text-sm text-gray-500">
+                                                        {activity.formatted_date}
+                                                    </div>
+                                                    {activity.metadata && Object.keys(activity.metadata).length > 0 && (
+                                                        <div className="mt-1 text-xs text-gray-400">
+                                                            {Object.entries(activity.metadata).map(([key, value]) => (
+                                                                <span key={key} className="mr-3">
+                                                                    {key}: {typeof value === 'object' ? JSON.stringify(value) : value}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
