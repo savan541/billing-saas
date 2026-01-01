@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Currency;
 use App\Events\InvoiceCreated;
 use App\Events\InvoicePaid;
 use App\Services\InvoicePdfService;
@@ -27,6 +28,11 @@ class Invoice extends Model
         'due_date',
         'notes',
         'paid_at',
+        'stripe_session_id',
+        'stripe_payment_intent_id',
+        'invoice_tax_rate',
+        'tax_exempt_at_time',
+        'currency',
     ];
 
     protected $casts = [
@@ -37,6 +43,9 @@ class Invoice extends Model
         'issue_date' => 'date',
         'due_date' => 'date',
         'paid_at' => 'datetime',
+        'invoice_tax_rate' => 'decimal:4',
+        'tax_exempt_at_time' => 'boolean',
+        'currency' => Currency::class,
     ];
 
     protected $appends = ['can_be_modified', 'total_paid', 'remaining_balance'];
@@ -132,14 +141,56 @@ class Invoice extends Model
         return $this->getRemainingBalance();
     }
 
+    public function getTaxRateAtTime(): float
+    {
+        return $this->invoice_tax_rate ?? 0.0;
+    }
+
+    public function getFormattedTaxRateAtTime(): string
+    {
+        $rate = $this->getTaxRateAtTime();
+        return ($rate * 100) . '%';
+    }
+
+    public function wasTaxExemptAtTime(): bool
+    {
+        return $this->tax_exempt_at_time ?? false;
+    }
+
+    public function getTaxLabelAtTime(): string
+    {
+        if ($this->wasTaxExemptAtTime()) {
+            return 'Tax Exempt';
+        }
+        
+        $rate = $this->getFormattedTaxRateAtTime();
+        return $rate === '0%' ? 'No Tax' : $rate;
+    }
+
+    public function getCurrencySymbol(): string
+    {
+        return $this->currency?->getSymbol() ?? '$';
+    }
+
+    public function getFormattedCurrency(): string
+    {
+        return $this->currency?->getFormatted() ?? 'USD ($)';
+    }
+
+    public function formatAmount(float $amount): string
+    {
+        $symbol = $this->getCurrencySymbol();
+        return $symbol . number_format($amount, 2);
+    }
+
     public function getFormattedTotalPaid(): string
     {
-        return '$' . number_format($this->getTotalPaid(), 2);
+        return $this->formatAmount($this->getTotalPaid());
     }
 
     public function getFormattedRemainingBalance(): string
     {
-        return '$' . number_format($this->getRemainingBalance(), 2);
+        return $this->formatAmount($this->getRemainingBalance());
     }
 
     public function isFullyPaid(): bool

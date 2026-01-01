@@ -37,7 +37,10 @@ const invoiceStatusLabels = {
     overdue: 'Overdue',
 };
 
-export default function Show({ recurringInvoice }) {
+export default function RecurringInvoiceShow({ recurringInvoice }) {
+    // Get currency symbol from client
+    const currencySymbol = recurringInvoice.client?.currency_symbol || '$';
+
     const handlePause = () => {
         router.post(route('recurring-invoices.pause', recurringInvoice.id));
     };
@@ -100,7 +103,7 @@ export default function Show({ recurringInvoice }) {
                                 <div className="bg-gray-50 p-4 rounded-lg">
                                     <h3 className="text-sm font-medium text-gray-500 mb-2">Amount</h3>
                                     <p className="text-lg font-semibold text-gray-900">
-                                        ${parseFloat(recurringInvoice.amount).toFixed(2)}
+                                        {currencySymbol}{parseFloat(recurringInvoice.amount).toFixed(2)}
                                     </p>
                                 </div>
                                 <div className="bg-gray-50 p-4 rounded-lg">
@@ -188,7 +191,7 @@ export default function Show({ recurringInvoice }) {
                                                             {new Date(invoice.due_date).toLocaleDateString()}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                            ${parseFloat(invoice.total).toFixed(2)}
+                                                            {recurringInvoice.client?.currency_symbol || '$'}{parseFloat(invoice.total).toFixed(2)}
                                                         </td>
                                                         <td className="px-6 py-4 whitespace-nowrap">
                                                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${invoiceStatusColors[invoice.status]}`}>

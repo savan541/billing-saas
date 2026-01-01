@@ -57,6 +57,11 @@ class Payment extends Model
 
         static::created(function ($payment) {
             PaymentRecorded::dispatch($payment);
+            
+            // Update invoice timestamp to trigger PDF regeneration
+            if ($payment->invoice) {
+                $payment->invoice->touch();
+            }
         });
     }
 }

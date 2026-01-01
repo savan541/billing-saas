@@ -105,6 +105,10 @@ export default function Show({ invoice }) {
         window.open(route('invoices.download', invoice.id), '_blank');
     };
 
+    const handlePayInvoice = () => {
+        router.post(route('invoices.payment.checkout', invoice.id));
+    };
+
     return (
         <AuthenticatedLayout>
             <Head title={`Invoice ${invoice.invoice_number}`} />
@@ -141,8 +145,8 @@ export default function Show({ invoice }) {
                             <div className="p-6">
                                 {isAddingItem && (
                                     <div className="border rounded-lg p-4 mb-4 bg-gray-50">
-                                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
-                                            <div className="lg:col-span-5">
+                                        <div className="space-y-4">
+                                            <div>
                                                 <InputLabel>Description</InputLabel>
                                                 <TextInput
                                                     value={newItem.description}
@@ -155,37 +159,39 @@ export default function Show({ invoice }) {
                                                     placeholder="Item description"
                                                 />
                                             </div>
-                                            <div className="lg:col-span-2">
-                                                <InputLabel>Quantity</InputLabel>
-                                                <TextInput
-                                                    type="number"
-                                                    step="0.01"
-                                                    value={newItem.quantity}
-                                                    onChange={(e) =>
-                                                        setNewItem({
-                                                            ...newItem,
-                                                            quantity: e.target.value,
-                                                        })
-                                                    }
-                                                    placeholder="1"
-                                                />
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <InputLabel>Quantity</InputLabel>
+                                                    <TextInput
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={newItem.quantity}
+                                                        onChange={(e) =>
+                                                            setNewItem({
+                                                                ...newItem,
+                                                                quantity: e.target.value,
+                                                            })
+                                                        }
+                                                        placeholder="1"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <InputLabel>Unit Price</InputLabel>
+                                                    <TextInput
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={newItem.unit_price}
+                                                        onChange={(e) =>
+                                                            setNewItem({
+                                                                ...newItem,
+                                                                unit_price: e.target.value,
+                                                            })
+                                                        }
+                                                        placeholder="0.00"
+                                                    />
+                                                </div>
                                             </div>
-                                            <div className="lg:col-span-2">
-                                                <InputLabel>Unit Price</InputLabel>
-                                                <TextInput
-                                                    type="number"
-                                                    step="0.01"
-                                                    value={newItem.unit_price}
-                                                    onChange={(e) =>
-                                                        setNewItem({
-                                                            ...newItem,
-                                                            unit_price: e.target.value,
-                                                        })
-                                                    }
-                                                    placeholder="0.00"
-                                                />
-                                            </div>
-                                            <div className="lg:col-span-3 flex gap-2">
+                                            <div className="flex gap-2">
                                                 <PrimaryButton onClick={handleAddItem}>Save</PrimaryButton>
                                                 <SecondaryButton onClick={cancelAdding}>Cancel</SecondaryButton>
                                             </div>
@@ -346,30 +352,32 @@ export default function Show({ invoice }) {
                                 <div className="space-y-2">
                                     <div className="flex justify-between">
                                         <span>Subtotal:</span>
-                                        <span>${parseFloat(invoice.subtotal).toFixed(2)}</span>
+                                        <span>{invoice.formatAmount ? invoice.formatAmount(parseFloat(invoice.subtotal)) : '$' + parseFloat(invoice.subtotal).toFixed(2)}</span>
                                     </div>
-                                    <div className="flex justify-between">
-                                        <span>Tax (10%):</span>
-                                        <span>${parseFloat(invoice.tax).toFixed(2)}</span>
-                                    </div>
+                                    {(!invoice.wasTaxExemptAtTime && invoice.tax > 0) && (
+                                        <div className="flex justify-between">
+                                            <span>Tax ({invoice.getFormattedTaxRateAtTime}):</span>
+                                            <span>{invoice.formatAmount ? invoice.formatAmount(parseFloat(invoice.tax)) : '$' + parseFloat(invoice.tax).toFixed(2)}</span>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between">
                                         <span>Discount:</span>
-                                        <span>${parseFloat(invoice.discount || 0).toFixed(2)}</span>
+                                        <span>{invoice.formatAmount ? invoice.formatAmount(parseFloat(invoice.discount || 0)) : '$' + parseFloat(invoice.discount || 0).toFixed(2)}</span>
                                     </div>
-                                    <div className="flex justify-between">
+                                    <div className="flex justify-between font-bold text-lg border-t pt-2">
                                         <span>Total:</span>
-                                        <span>${parseFloat(invoice.total).toFixed(2)}</span>
+                                        <span>{invoice.formatAmount ? invoice.formatAmount(parseFloat(invoice.total)) : '$' + parseFloat(invoice.total).toFixed(2)}</span>
                                     </div>
                                     {(invoice.total_paid > 0 || invoice.payments?.length > 0) && (
                                         <>
                                             <hr />
                                             <div className="flex justify-between text-green-600">
                                                 <span>Total Paid:</span>
-                                                <span>${parseFloat(invoice.total_paid || 0).toFixed(2)}</span>
+                                                <span>{invoice.getFormattedTotalPaid ? invoice.getFormattedTotalPaid() : '$' + parseFloat(invoice.total_paid || 0).toFixed(2)}</span>
                                             </div>
                                             <div className="flex justify-between font-bold text-lg">
                                                 <span>Remaining Balance:</span>
-                                                <span>${parseFloat(invoice.total - (invoice.total_paid || 0)).toFixed(2)}</span>
+                                                <span>{invoice.getFormattedRemainingBalance ? invoice.getFormattedRemainingBalance() : '$' + parseFloat(invoice.total - (invoice.total_paid || 0)).toFixed(2)}</span>
                                             </div>
                                         </>
                                     )}
@@ -386,7 +394,7 @@ export default function Show({ invoice }) {
 
                                 <hr />
 
-                                <div className="flex justify-end gap-2">
+                                <div className="flex flex-wrap justify-end gap-2 mt-4">
                                     <SecondaryButton
                                         onClick={handleDownloadPdf}
                                         disabled={false}
@@ -400,6 +408,14 @@ export default function Show({ invoice }) {
                                             Edit Invoice
                                         </PrimaryButton>
                                     </Link>
+                                    {invoice.status === 'sent' && (
+                                        <PrimaryButton
+                                            onClick={handlePayInvoice}
+                                            className="bg-green-600 hover:bg-green-700"
+                                        >
+                                            Pay Invoice
+                                        </PrimaryButton>
+                                    )}
                                     {invoice.status !== 'paid' && (
                                         <PrimaryButton
                                             onClick={() => setShowPaymentModal(true)}

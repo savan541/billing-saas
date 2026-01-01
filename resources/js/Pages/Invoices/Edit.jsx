@@ -26,6 +26,7 @@ export default function Edit({ invoice, clients }) {
     const [subtotal, setSubtotal] = useState(invoice.subtotal);
     const [tax, setTax] = useState(invoice.tax);
     const [total, setTotal] = useState(invoice.total);
+    const [currencySymbol, setCurrencySymbol] = useState(invoice.currency_symbol || '$');
 
     const calculateTotals = useCallback(() => {
         const subtotalAmount = data.items.reduce((sum, item) => {
@@ -34,13 +35,18 @@ export default function Edit({ invoice, clients }) {
             return sum + (quantity * unitPrice);
         }, 0);
 
-        const taxAmount = subtotalAmount * 0.1; // 10% tax
+        // Get client tax rate and currency
+        const selectedClient = clients.find(c => c.id === parseInt(data.client_id));
+        const taxRate = selectedClient && !selectedClient.tax_exempt ? (selectedClient.tax_rate || 0) : 0;
+        const currencySymbol = selectedClient?.currency_symbol || invoice.currency_symbol || '$';
+        const taxAmount = subtotalAmount * taxRate;
         const totalAmount = subtotalAmount + taxAmount;
 
         setSubtotal(subtotalAmount);
         setTax(taxAmount);
         setTotal(totalAmount);
-    }, [data.items]);
+        setCurrencySymbol(currencySymbol);
+    }, [data.items, data.client_id, clients, invoice.currency_symbol]);
 
     useEffect(() => {
         calculateTotals();
@@ -290,19 +296,25 @@ export default function Edit({ invoice, clients }) {
                                     <div className="space-y-2">
                                         <div className="flex justify-between">
                                             <span>Subtotal:</span>
-                                            <span>${parseFloat(subtotal).toFixed(2)}</span>
+                                            <span>{currencySymbol}{parseFloat(subtotal).toFixed(2)}</span>
                                         </div>
-                                        <div className="flex justify-between">
-                                            <span>Tax (10%):</span>
-                                            <span>${parseFloat(tax).toFixed(2)}</span>
-                                        </div>
+                                        {(() => {
+                                            const selectedClient = clients.find(c => c.id === parseInt(data.client_id));
+                                            const taxRate = selectedClient && !selectedClient.tax_exempt ? (selectedClient.tax_rate || 0) : 0;
+                                            return taxRate > 0 ? (
+                                                <div className="flex justify-between">
+                                                    <span>Tax ({(taxRate * 100).toFixed(2)}%):</span>
+                                                    <span>{currencySymbol}{parseFloat(tax).toFixed(2)}</span>
+                                                </div>
+                                            ) : null;
+                                        })()}
                                         <div className="flex justify-between">
                                             <span>Discount:</span>
-                                            <span>$0.00</span>
+                                            <span>{currencySymbol}0.00</span>
                                         </div>
                                         <div className="flex justify-between font-bold text-lg border-t pt-2">
                                             <span>Total:</span>
-                                            <span>${parseFloat(total).toFixed(2)}</span>
+                                            <span>{currencySymbol}{parseFloat(total).toFixed(2)}</span>
                                         </div>
                                     </div>
 

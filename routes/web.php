@@ -4,8 +4,10 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\InvoicesController;
 use App\Http\Controllers\InvoiceItemsController;
+use App\Http\Controllers\InvoicePaymentController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\RecurringInvoiceController;
+use App\Http\Controllers\StripeWebhookController;
 use App\Services\ClientService;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -52,6 +54,11 @@ Route::middleware('auth')->group(function () {
         Route::delete('items/{item}', [InvoiceItemsController::class, 'destroy'])->name('invoices.items.destroy');
         Route::post('payments', [PaymentController::class, 'store'])->name('invoices.payments.store');
         Route::get('download', [InvoicesController::class, 'download'])->name('invoices.download');
+        
+        // Stripe payment routes
+        Route::post('payment/checkout', [InvoicePaymentController::class, 'createCheckoutSession'])->name('invoices.payment.checkout');
+        Route::get('payment/success', [InvoicePaymentController::class, 'success'])->name('invoices.payment.success');
+        Route::get('payment/cancel', [InvoicePaymentController::class, 'cancel'])->name('invoices.payment.cancel');
     });
 
     Route::prefix('recurring-invoices/{recurring_invoice}')->group(function () {
@@ -60,5 +67,8 @@ Route::middleware('auth')->group(function () {
         Route::post('cancel', [RecurringInvoiceController::class, 'cancel'])->name('recurring-invoices.cancel');
     });
 });
+
+// Stripe webhook route (no auth middleware)
+Route::post('/stripe/webhook', [StripeWebhookController::class, 'handleWebhook'])->name('stripe.webhook');
 
 require __DIR__.'/auth.php';

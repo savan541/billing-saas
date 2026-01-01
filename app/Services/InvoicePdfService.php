@@ -35,7 +35,7 @@ class InvoicePdfService
         // }
 
         $pdf = Pdf::loadView('pdfs.invoice', [
-            'invoice' => $invoice->load(['client', 'items']),
+            'invoice' => $invoice->load(['client', 'items', 'payments']),
             'company' => $this->getCompanyDetails($invoice),
         ]);
         
@@ -55,7 +55,7 @@ class InvoicePdfService
     private function createPdf(Invoice $invoice, string $pdfPath): void
     {
         $pdf = Pdf::loadView('pdfs.invoice', [
-            'invoice' => $invoice->load(['client', 'items']),
+            'invoice' => $invoice->load(['client', 'items', 'payments']),
             'company' => $this->getCompanyDetails($invoice),
         ]);
         

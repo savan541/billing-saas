@@ -2,6 +2,37 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 
 export default function Dashboard({ stats }) {
+    // Format amount with currency symbol
+    const formatAmount = (amount, currency = 'USD') => {
+        const symbols = {
+            'USD': '$',
+            'EUR': '€',
+            'GBP': '£',
+            'CAD': 'C$',
+            'AUD': 'A$',
+            'JPY': '¥',
+            'CHF': 'CHF',
+            'CNY': '¥',
+            'INR': '₹',
+            'MXN': '$',
+            'BRL': 'R$',
+        };
+        return `${symbols[currency] || '$'}${amount}`;
+    };
+
+    // Group revenue by currency
+    const revenueByCurrency = {};
+    if (stats.clients) {
+        stats.clients.forEach(client => {
+            const currency = client.currency || 'USD';
+            if (!revenueByCurrency[currency]) {
+                revenueByCurrency[currency] = 0;
+            }
+            // For now, we'll show total revenue (this would need actual invoice data)
+            revenueByCurrency[currency] += parseFloat(stats.totalRevenue || 0);
+        });
+    }
+
     return (
         <AuthenticatedLayout
             header={
@@ -79,7 +110,12 @@ export default function Dashboard({ stats }) {
                                                 Total Revenue
                                             </dt>
                                             <dd className="text-lg font-medium text-gray-900">
-                                                ${stats.totalRevenue}
+                                                {Object.keys(revenueByCurrency).length > 1 
+                                                    ? Object.entries(revenueByCurrency).map(([currency, amount]) => 
+                                                        `${formatAmount(amount.toFixed(2), currency)}`
+                                                    ).join(' + ')
+                                                    : formatAmount(parseFloat(stats.totalRevenue || 0).toFixed(2))
+                                                }
                                             </dd>
                                         </dl>
                                     </div>

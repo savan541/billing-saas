@@ -179,7 +179,7 @@ export default function Index({ recurringInvoices, filters }) {
                                                         {recurringInvoice.client?.name}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                        ${parseFloat(recurringInvoice.amount).toFixed(2)}
+                                                        {recurringInvoice.client?.currency_symbol || '$'}{parseFloat(recurringInvoice.amount).toFixed(2)}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                         {frequencyLabels[recurringInvoice.frequency]}

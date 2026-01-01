@@ -2,7 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
-export default function ClientsIndex({ clients }) {
+export default function ClientsIndex({ clients, currencyOptions }) {
     const { flash } = usePage().props;
     const [editingClient, setEditingClient] = useState(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
@@ -13,6 +13,13 @@ export default function ClientsIndex({ clients }) {
         phone: '',
         company: '',
         address: '',
+        tax_id: '',
+        tax_country: '',
+        tax_state: '',
+        tax_rate: '',
+        tax_exempt: false,
+        tax_exemption_reason: '',
+        currency: 'USD',
     });
 
     const handleSubmit = (e) => {
@@ -43,6 +50,13 @@ export default function ClientsIndex({ clients }) {
             phone: client.phone || '',
             company: client.company || '',
             address: client.address || '',
+            tax_id: client.tax_id || '',
+            tax_country: client.tax_country || '',
+            tax_state: client.tax_state || '',
+            tax_rate: client.tax_rate || '',
+            tax_exempt: client.tax_exempt || false,
+            tax_exemption_reason: client.tax_exemption_reason || '',
+            currency: client.currency || 'USD',
         });
         setShowCreateForm(false);
     };
@@ -165,6 +179,135 @@ export default function ClientsIndex({ clients }) {
                                                     <p className="mt-1 text-sm text-red-600">{errors.address}</p>
                                                 )}
                                             </div>
+
+                                            <h4 className="md:col-span-2 text-lg font-medium mt-6 mb-4 text-gray-800 border-t pt-4">
+                                                Tax Information
+                                            </h4>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Currency
+                                                </label>
+                                                <select
+                                                    value={data.currency}
+                                                    onChange={(e) => setData('currency', e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                >
+                                                    {currencyOptions.map(option => (
+                                                        <option key={option.value} value={option.value}>
+                                                            {option.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {errors.currency && (
+                                                    <p className="mt-1 text-sm text-red-600">{errors.currency}</p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Tax ID (VAT/GST)
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={data.tax_id}
+                                                    onChange={(e) => setData('tax_id', e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    placeholder="e.g., VAT123456789"
+                                                />
+                                                {errors.tax_id && (
+                                                    <p className="mt-1 text-sm text-red-600">{errors.tax_id}</p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Country
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={data.tax_country}
+                                                    onChange={(e) => setData('tax_country', e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    placeholder="US, CA, UK, etc."
+                                                    maxLength={2}
+                                                />
+                                                {errors.tax_country && (
+                                                    <p className="mt-1 text-sm text-red-600">{errors.tax_country}</p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    State/Province
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={data.tax_state}
+                                                    onChange={(e) => setData('tax_state', e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    placeholder="CA, NY, ON, etc."
+                                                    maxLength={50}
+                                                />
+                                                {errors.tax_state && (
+                                                    <p className="mt-1 text-sm text-red-600">{errors.tax_state}</p>
+                                                )}
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                    Tax Rate (%)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    max="100"
+                                                    value={data.tax_rate ? (parseFloat(data.tax_rate) * 100) : ''}
+                                                    onChange={(e) => setData('tax_rate', e.target.value ? parseFloat(e.target.value) / 100 : '')}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    placeholder="8.25 (for 8.25%)"
+                                                />
+                                                <p className="mt-1 text-xs text-gray-500">Enter percentage (e.g., 8.25 for 8.25%)</p>
+                                                {errors.tax_rate && (
+                                                    <p className="mt-1 text-sm text-red-600">{errors.tax_rate}</p>
+                                                )}
+                                            </div>
+
+                                            <div className="md:col-span-2">
+                                                <label className="flex items-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={data.tax_exempt}
+                                                        onChange={(e) => setData('tax_exempt', e.target.checked)}
+                                                        className="mr-2"
+                                                    />
+                                                    <span className="text-sm font-medium text-gray-700">
+                                                        Tax Exempt
+                                                    </span>
+                                                </label>
+                                                {errors.tax_exempt && (
+                                                    <p className="mt-1 text-sm text-red-600">{errors.tax_exempt}</p>
+                                                )}
+                                            </div>
+
+                                            {data.tax_exempt && (
+                                                <div className="md:col-span-2">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                        Exemption Reason
+                                                    </label>
+                                                    <textarea
+                                                        value={data.tax_exemption_reason}
+                                                        onChange={(e) => setData('tax_exemption_reason', e.target.value)}
+                                                        rows={2}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        placeholder="Reason for tax exemption (e.g., Resale, Charity, Government)"
+                                                    />
+                                                    {errors.tax_exemption_reason && (
+                                                        <p className="mt-1 text-sm text-red-600">{errors.tax_exemption_reason}</p>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="mt-4 flex gap-2">

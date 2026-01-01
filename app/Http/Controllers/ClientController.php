@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\Currency;
 use App\Http\Requests\StoreClientRequest;
 use App\Http\Requests\UpdateClientRequest;
 use App\Http\Requests\DeleteClientRequest;
@@ -20,7 +21,8 @@ class ClientController extends Controller
         $clients = $this->clientService->getClientsForUser($request->user());
         
         return inertia('Clients/Index', [
-            'clients' => $clients
+            'clients' => $clients,
+            'currencyOptions' => Currency::getOptions(),
         ]);
     }
 

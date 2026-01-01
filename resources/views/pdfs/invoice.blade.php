@@ -206,6 +206,26 @@
         .status-sent { background-color: #007bff; color: white; }
         .status-paid { background-color: #28a745; color: white; }
         .status-overdue { background-color: #dc3545; color: white; }
+        .status-pending { background-color: #ffc107; color: #000; }
+        .status-failed { background-color: #dc3545; color: white; }
+        .payment-amount { font-weight: bold; color: #28a745; }
+        
+        .compact-table {
+            font-size: 10px;
+        }
+        .compact-table th,
+        .compact-table td {
+            padding: 6px 8px;
+            border: 1px solid #ddd;
+            font-size: 10px;
+        }
+        .compact-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .page-break {
+            page-break-inside: avoid;
+        }
     </style>
 </head>
 <body>
@@ -301,6 +321,52 @@
             </tr>
         </table>
     </div>
+    
+    @if($invoice->payments && $invoice->payments->count() > 0)
+        <div class="summary-section page-break">
+            <h3 style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #333;">Payment Summary</h3>
+            <table class="compact-table" style="margin-bottom: 15px;">
+                <tr>
+                    <td class="label">Total Paid:</td>
+                    <td class="value"><span class="payment-amount">{{ $invoice->currency_symbol }}{{ number_format($invoice->total_paid, 2) }}</span></td>
+                </tr>
+                <tr>
+                    <td class="label">Remaining Balance:</td>
+                    <td class="value"><span class="payment-amount">{{ $invoice->currency_symbol }}{{ number_format($invoice->remaining_balance, 2) }}</span></td>
+                </tr>
+            </table>
+        </div>
+    @endif
+
+    @if($invoice->payments && $invoice->payments->count() > 0)
+        <div class="summary-section page-break">
+            <h3 style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #333;">Payment History</h3>
+            <table class="compact-table" style="margin-bottom: 15px;">
+                <thead>
+                    <tr>
+                        <th style="text-align: left; padding: 6px 8px; border: 1px solid #ddd; background-color: #f8f9fa;">Date</th>
+                        <th style="text-align: left; padding: 6px 8px; border: 1px solid #ddd; background-color: #f8f9fa;">Method</th>
+                        <th style="text-align: left; padding: 6px 8px; border: 1px solid #ddd; background-color: #f8f9fa;">Amount</th>
+                        <th style="text-align: left; padding: 6px 8px; border: 1px solid #ddd; background-color: #f8f9fa;">Status</th>
+                        <th style="text-align: left; padding: 6px 8px; border: 1px solid #ddd; background-color: #f8f9fa;">Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($invoice->payments as $payment)
+                        <tr>
+                            <td style="padding: 6px 8px; border: 1px solid #ddd;">{{ $payment->created_at->format('M d, Y') }}</td>
+                            <td style="padding: 6px 8px; border: 1px solid #ddd;">{{ $payment->getPaymentMethodLabel() }}</td>
+                            <td style="padding: 6px 8px; border: 1px solid #ddd;"><span class="payment-amount">{{ $invoice->currency_symbol }}{{ number_format($payment->amount, 2) }}</span></td>
+                            <td style="padding: 6px 8px; border: 1px solid #ddd;">
+                                <span class="status-badge status-{{ $payment->status ?? 'pending' }}">{{ ucfirst($payment->status ?? 'pending') }}</span>
+                            </td>
+                            <td style="padding: 6px 8px; border: 1px solid #ddd;">{{ $payment->notes ?? '-' }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
 
     @if($invoice->notes)
         <div class="notes-section">
