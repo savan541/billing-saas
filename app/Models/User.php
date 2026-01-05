@@ -27,6 +27,17 @@ class User extends Authenticatable
         'address',
         'phone',
         'website',
+        'base_currency',
+    ];
+    
+    protected $attributes = [
+        'base_currency' => 'USD',
+    ];
+    
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'email_notifications_enabled' => 'boolean',
+        'email_notification_preferences' => 'array',
     ];
 
     /**
@@ -52,6 +63,23 @@ class User extends Authenticatable
             'email_notifications_enabled' => 'boolean',
             'email_notification_preferences' => 'array',
         ];
+    }
+    
+    /**
+     * Get the user's preferred currency
+     */
+    public function getPreferredCurrency(): string
+    {
+        return $this->base_currency ?: 'USD';
+    }
+    
+    /**
+     * Get the user's currency symbol
+     */
+    public function getCurrencySymbol(): string
+    {
+        $currencyService = app(\App\Services\CurrencyService::class);
+        return $currencyService->getCurrencySymbol($this->getPreferredCurrency());
     }
 
     public function clients(): HasMany

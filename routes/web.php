@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\InvoicesController;
@@ -8,7 +9,6 @@ use App\Http\Controllers\InvoicePaymentController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\RecurringInvoiceController;
 use App\Http\Controllers\StripeWebhookController;
-use App\Services\ClientService;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -26,13 +26,7 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function (ClientService $clientService) {
-    $user = auth()->user();
-    
-    return Inertia::render('Dashboard', [
-        'stats' => $clientService->getStatsForUser($user)
-    ]);
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', DashboardController::class)->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

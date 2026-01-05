@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Http\Requests\UpdateInvoiceRequest;
 use App\Models\Invoice;
+use App\Models\Client;
 use App\Services\InvoiceActivityService;
 use App\Services\InvoicePdfService;
 use App\Services\InvoiceService;
+use App\Services\RealTimeAutomationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -18,13 +20,17 @@ class InvoicesController extends Controller
     public function __construct(
     private InvoiceService $invoiceService,
     private InvoicePdfService $pdfService,
-    private InvoiceActivityService $activityService
+    private InvoiceActivityService $activityService,
+    private RealTimeAutomationService $automationService
     ) {
         $this->authorizeResource(Invoice::class, 'invoice');
     }
 
     public function index(Request $request)
     {
+        // Run automations when user visits invoices page
+        $this->automationService->runOnPageLoad(Auth::user()->id);
+        
         $invoices = Auth::user()
             ->invoices()
             ->with('client')

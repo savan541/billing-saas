@@ -44,7 +44,9 @@ class InvoiceService
             $data = array_merge($data, $totals, [
                 'invoice_tax_rate' => $taxRate,
                 'tax_exempt_at_time' => $client->tax_exempt ?? false,
-                'currency' => $client->currency ?? 'USD',
+                'currency' => $client->currency instanceof \App\Enums\Currency 
+                    ? $client->currency->value 
+                    : ($client->currency ?? 'USD'),
             ]);
             
             $invoice = Invoice::create($data);
@@ -67,33 +69,39 @@ class InvoiceService
             $clientId = $data['client_id'] ?? $invoice->client_id;
             $client = \App\Models\Client::find($clientId);
             
-            // Only update tax rate and currency if client changed
-            $clientChanged = $clientId !== $invoice->client_id;
-            if ($clientChanged) {
+            // Always recalculate totals from items
+            if ($clientId !== $invoice->client_id) {
+                // Client changed - use new client's tax rate
                 $taxRate = $client->getEffectiveTaxRate();
                 $data = array_merge($data, [
                     'invoice_tax_rate' => $taxRate,
                     'tax_exempt_at_time' => $client->tax_exempt ?? false,
-                    'currency' => $client->currency ?? 'USD',
+                    'currency' => $client->currency instanceof \App\Enums\Currency 
+                        ? $client->currency->value 
+                        : ($client->currency ?? 'USD'),
                 ]);
             } else {
-                // Use existing tax rate and currency for consistency
+                // Same client - use existing tax rate for consistency
                 $taxRate = $invoice->getTaxRateAtTime();
             }
             
+            // Always recalculate totals from items
             $totals = $this->calculateInvoiceTotals($items, $taxRate);
             $data = array_merge($data, $totals);
             
+            // Update invoice with new totals
             $invoice->update($data);
             
-            // Remove existing items and create new ones
+            // Remove existing items and create new ones with correct totals
             $invoice->items()->delete();
             
             foreach ($items as $itemData) {
+                // Ensure item total is calculated correctly
                 $itemData['total'] = (float) ($itemData['quantity'] ?? 0) * (float) ($itemData['unit_price'] ?? 0);
                 $invoice->items()->create($itemData);
             }
             
+            // Refresh to get updated relationships
             return $invoice->fresh(['client', 'items']);
         });
     }
@@ -104,6 +112,46 @@ class InvoiceService
             $invoice->items()->delete();
             return $invoice->delete();
         });
+    }
+    
+    /**
+     * Recalculate and fix invoice totals based on items
+     */
+    public function fixInvoiceTotals(Invoice $invoice): Invoice
+    {
+        return DB::transaction(function () use ($invoice) {
+            $items = $invoice->items()->get()->toArray();
+            $taxRate = $invoice->getTaxRateAtTime();
+            
+            // Recalculate totals from items
+            $totals = $this->calculateInvoiceTotals($items, $taxRate);
+            
+            // Update invoice with corrected totals
+            $invoice->update($totals);
+            
+            return $invoice->fresh();
+        });
+    }
+    
+    /**
+     * Fix all invoice totals in the system
+     */
+    public function fixAllInvoiceTotals(): int
+    {
+        $fixed = 0;
+        Invoice::with('items')->chunk(100, function ($invoices) use (&$fixed) {
+            foreach ($invoices as $invoice) {
+                $itemsSubtotal = $invoice->items->sum('total');
+                $expectedTotal = $itemsSubtotal + ($itemsSubtotal * $invoice->getTaxRateAtTime());
+                
+                if (abs($invoice->total - $expectedTotal) > 0.01) {
+                    $this->fixInvoiceTotals($invoice);
+                    $fixed++;
+                }
+            }
+        });
+        
+        return $fixed;
     }
     
     public function updateInvoiceStatus(Invoice $invoice, string $status): Invoice

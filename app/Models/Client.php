@@ -6,9 +6,11 @@ use App\Enums\Currency;
 use App\Scopes\UserScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Client extends Model
 {
+    use SoftDeletes;
     protected $fillable = [
         'name',
         'email',

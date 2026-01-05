@@ -1,11 +1,15 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, useForm, usePage, Link } from '@inertiajs/react';
 import { useState } from 'react';
+import EmptyState from '@/Components/EmptyState';
+import ConfirmDialog from '@/Components/ConfirmDialog';
+import LoadingSpinner from '@/Components/LoadingSpinner';
 
 export default function ClientsIndex({ clients, currencyOptions }) {
     const { flash } = usePage().props;
     const [editingClient, setEditingClient] = useState(null);
     const [showCreateForm, setShowCreateForm] = useState(false);
+    const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, client: null });
 
     const { data, setData, post, put, delete: destroy, processing, errors, reset } = useForm({
         name: '',
@@ -62,8 +66,14 @@ export default function ClientsIndex({ clients, currencyOptions }) {
     };
 
     const handleDelete = (client) => {
-        if (confirm('Are you sure you want to delete this client?')) {
-            destroy(route('clients.destroy', client.id));
+        setDeleteDialog({ isOpen: true, client });
+    };
+
+    const confirmDelete = () => {
+        if (deleteDialog.client) {
+            destroy(route('clients.destroy', deleteDialog.client.id), {
+                onSuccess: () => setDeleteDialog({ isOpen: false, client: null })
+            });
         }
     };
 
@@ -80,58 +90,74 @@ export default function ClientsIndex({ clients, currencyOptions }) {
     return (
         <AuthenticatedLayout
             header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800">
-                    Clients
-                </h2>
+                <div className="animate-fade-in">
+                    <h2 className="text-3xl font-bold text-gray-900">Clients</h2>
+                    <p className="mt-2 text-gray-600">Manage your client information and billing details</p>
+                </div>
             }
         >
             <Head title="Clients" />
 
             <div className="py-12">
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+                    <div className="overflow-hidden bg-white shadow-lg rounded-xl border border-gray-100">
                         <div className="p-6">
                             {flash?.success && (
-                                <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-                                    {flash.success}
+                                <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-800 rounded-lg animate-fade-in">
+                                    <div className="flex items-center">
+                                        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                        </svg>
+                                        {flash.success}
+                                    </div>
                                 </div>
                             )}
 
                             {(showCreateForm || editingClient) && (
-                                <div className="mb-8 p-6 bg-gray-50 rounded-lg">
-                                    <h3 className="text-lg font-medium mb-4">
+                                <div className="mb-8 p-6 bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl border border-gray-200">
+                                    <h3 className="text-xl font-semibold mb-6 text-gray-900">
                                         {editingClient ? 'Edit Client' : 'Create New Client'}
                                     </h3>
                                     <form onSubmit={handleSubmit}>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
                                                     Name *
                                                 </label>
                                                 <input
                                                     type="text"
                                                     value={data.name}
                                                     onChange={(e) => setData('name', e.target.value)}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                                     required
                                                 />
                                                 {errors.name && (
-                                                    <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                                                    <p className="mt-2 text-sm text-red-600 flex items-center">
+                                                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                        </svg>
+                                                        {errors.name}
+                                                    </p>
                                                 )}
                                             </div>
 
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                                <label className="block text-sm font-semibold text-gray-700 mb-2">
                                                     Email
                                                 </label>
                                                 <input
                                                     type="email"
                                                     value={data.email}
                                                     onChange={(e) => setData('email', e.target.value)}
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                                 />
                                                 {errors.email && (
-                                                    <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                                                    <p className="mt-2 text-sm text-red-600 flex items-center">
+                                                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                        </svg>
+                                                        {errors.email}
+                                                    </p>
                                                 )}
                                             </div>
 
@@ -310,18 +336,31 @@ export default function ClientsIndex({ clients, currencyOptions }) {
                                             )}
                                         </div>
 
-                                        <div className="mt-4 flex gap-2">
+                                        <div className="mt-8 flex gap-3">
                                             <button
                                                 type="submit"
                                                 disabled={processing}
-                                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center"
                                             >
-                                                {processing ? 'Saving...' : (editingClient ? 'Update Client' : 'Create Client')}
+                                                {processing ? (
+                                                    <>
+                                                        <LoadingSpinner size="sm" className="mr-2" />
+                                                        {editingClient ? 'Updating...' : 'Creating...'}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                        {editingClient ? 'Update Client' : 'Create Client'}
+                                                    </>
+                                                )}
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={editingClient ? cancelEdit : cancelCreate}
-                                                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                                                disabled={processing}
+                                                className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                                             >
                                                 Cancel
                                             </button>
@@ -333,8 +372,11 @@ export default function ClientsIndex({ clients, currencyOptions }) {
                             {!showCreateForm && !editingClient && (
                                 <button
                                     onClick={() => setShowCreateForm(true)}
-                                    className="mb-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                    className="mb-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center"
                                 >
+                                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                    </svg>
                                     Add New Client
                                 </button>
                             )}
@@ -364,35 +406,41 @@ export default function ClientsIndex({ clients, currencyOptions }) {
                                                 </th>
                                             </tr>
                                         </thead>
-                                        <tbody className="bg-white divide-y divide-gray-200">
+                                        <tbody className="bg-white divide-y divide-gray-100">
                                             {clients.map((client) => (
-                                                <tr key={client.id}>
+                                                <tr key={client.id} className="hover:bg-gray-50 transition-colors">
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                                         {client.name}
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                                         {client.email || '-'}
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                                         {client.phone || '-'}
                                                     </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                                         {client.company || '-'}
                                                     </td>
-                                                    <td className="px-6 py-4 text-sm text-gray-500">
+                                                    <td className="px-6 py-4 text-sm text-gray-600">
                                                         {client.address || '-'}
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                         <button
                                                             onClick={() => handleEdit(client)}
-                                                            className="text-blue-600 hover:text-blue-900 mr-3"
+                                                            className="text-blue-600 hover:text-blue-900 mr-4 transition-colors flex items-center"
                                                         >
+                                                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
                                                             Edit
                                                         </button>
                                                         <button
                                                             onClick={() => handleDelete(client)}
-                                                            className="text-red-600 hover:text-red-900"
+                                                            className="text-red-600 hover:text-red-900 transition-colors flex items-center"
                                                         >
+                                                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
                                                             Delete
                                                         </button>
                                                     </td>
@@ -402,10 +450,39 @@ export default function ClientsIndex({ clients, currencyOptions }) {
                                     </table>
                                 </div>
                             ) : (
-                                <div className="text-center py-8 text-gray-500">
-                                    No clients found. Create your first client to get started.
-                                </div>
+                                <EmptyState
+                                    icon={
+                                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                    }
+                                    title="No clients yet"
+                                    description="Add your first client to start creating invoices and managing your business relationships."
+                                    action={
+                                        <button
+                                            onClick={() => setShowCreateForm(true)}
+                                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center"
+                                        >
+                                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                                            </svg>
+                                            Add Your First Client
+                                        </button>
+                                    }
+                                />
                             )}
+
+                            {/* Confirmation Dialog */}
+                            <ConfirmDialog
+                                isOpen={deleteDialog.isOpen}
+                                onClose={() => setDeleteDialog({ isOpen: false, client: null })}
+                                onConfirm={confirmDelete}
+                                title="Delete Client"
+                                message={`Are you sure you want to delete ${deleteDialog.client?.name}? This action cannot be undone and will remove all associated invoices and data.`}
+                                confirmText="Delete Client"
+                                cancelText="Cancel"
+                                type="danger"
+                            />
                         </div>
                     </div>
                 </div>

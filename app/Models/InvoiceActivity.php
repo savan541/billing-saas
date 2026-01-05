@@ -36,6 +36,11 @@ class InvoiceActivity extends Model
             'cancelled' => 'Invoice cancelled',
             'updated' => 'Invoice updated',
             'deleted' => 'Invoice deleted',
+            'marked_overdue' => 'Invoice automatically marked as overdue',
+            'generated_from_recurring' => 'Invoice generated from recurring template',
+            'due_soon_reminder' => 'Payment reminder sent (due soon)',
+            'overdue_reminder' => 'Overdue payment reminder sent',
+            'follow_up_reminder' => 'Follow-up reminder sent',
             default => ucfirst($this->action),
         };
     }
@@ -51,6 +56,11 @@ class InvoiceActivity extends Model
             'cancelled' => 'x-circle',
             'updated' => 'pencil',
             'deleted' => 'trash',
+            'marked_overdue' => 'exclamation-triangle',
+            'generated_from_recurring' => 'refresh',
+            'due_soon_reminder' => 'bell',
+            'overdue_reminder' => 'exclamation-circle',
+            'follow_up_reminder' => 'flag',
             default => 'information-circle',
         };
     }
@@ -66,6 +76,11 @@ class InvoiceActivity extends Model
             'cancelled' => 'red',
             'updated' => 'yellow',
             'deleted' => 'red',
+            'marked_overdue' => 'red',
+            'generated_from_recurring' => 'blue',
+            'due_soon_reminder' => 'yellow',
+            'overdue_reminder' => 'orange',
+            'follow_up_reminder' => 'red',
             default => 'gray',
         };
     }

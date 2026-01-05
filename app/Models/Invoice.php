@@ -249,10 +249,13 @@ class Invoice extends Model
 
     public function markAsPaid(): void
     {
-        if ($this->canBeMarkedAsPaid()) {
+        if ($this->canBeMarkedAsPaid() && $this->isFullyPaid()) {
             $this->status = InvoiceStatus::PAID;
             $this->paid_at = now();
             $this->save();
+            
+            // Fire payment event
+            InvoicePaid::dispatch($this);
         }
     }
 
