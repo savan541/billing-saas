@@ -49,6 +49,11 @@ class InvoiceService
                     : ($client->currency ?? 'USD'),
             ]);
             
+            // Set paid_at if status is paid
+            if (isset($data['status']) && $data['status'] === 'paid') {
+                $data['paid_at'] = now();
+            }
+            
             $invoice = Invoice::create($data);
             
             foreach ($items as $itemData) {
@@ -88,6 +93,11 @@ class InvoiceService
             // Always recalculate totals from items
             $totals = $this->calculateInvoiceTotals($items, $taxRate);
             $data = array_merge($data, $totals);
+            
+            // Set paid_at if status is being changed to paid
+            if (isset($data['status']) && $data['status'] === 'paid' && $invoice->status !== 'paid') {
+                $data['paid_at'] = now();
+            }
             
             // Update invoice with new totals
             $invoice->update($data);
